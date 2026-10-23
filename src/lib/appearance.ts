@@ -32,6 +32,13 @@ export const APP_ICONS = {
   violet: 'Lila',
 } as const;
 
+/** Time ranges Spotify offers for "top tracks". */
+export const TOP_RANGES = {
+  short_term: '4 Wochen',
+  medium_term: '6 Monate',
+  long_term: '1 Jahr',
+} as const;
+
 export type Appearance = {
   accent: keyof typeof ACCENTS;
   background: keyof typeof BACKGROUNDS;
@@ -39,6 +46,11 @@ export type Appearance = {
   /** Drifting colour blobs in the background. */
   motion: boolean;
   icon: keyof typeof APP_ICONS;
+  /** Continue with favourites when a playlist/album ends. */
+  autoplay: boolean;
+  /** Keep the "Meine Top-Songs" playlist in sync with the top tracks. */
+  topPlaylist: boolean;
+  topRange: keyof typeof TOP_RANGES;
 };
 
 const STORAGE_KEY = 'glass-remote.appearance';
@@ -49,6 +61,9 @@ export const DEFAULT_APPEARANCE: Appearance = {
   glass: 'regular',
   motion: true,
   icon: 'chrome',
+  autoplay: true,
+  topPlaylist: true,
+  topRange: 'short_term',
 };
 
 const listeners = new Set<() => void>();
@@ -67,6 +82,9 @@ function readAppearance(): Appearance {
       glass: pick(GLASS_LEVELS, stored.glass, DEFAULT_APPEARANCE.glass),
       motion: typeof stored.motion === 'boolean' ? stored.motion : DEFAULT_APPEARANCE.motion,
       icon: pick(APP_ICONS, stored.icon, DEFAULT_APPEARANCE.icon),
+      autoplay: typeof stored.autoplay === 'boolean' ? stored.autoplay : DEFAULT_APPEARANCE.autoplay,
+      topPlaylist: typeof stored.topPlaylist === 'boolean' ? stored.topPlaylist : DEFAULT_APPEARANCE.topPlaylist,
+      topRange: pick(TOP_RANGES, stored.topRange, DEFAULT_APPEARANCE.topRange),
     };
   } catch {
     return DEFAULT_APPEARANCE;
@@ -87,6 +105,9 @@ export function applyAppearance(value: Appearance = appearance): void {
   const href = value.icon === DEFAULT_APPEARANCE.icon ? './apple-touch-icon.png' : `./icons/${value.icon}-180.png`;
   document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')?.setAttribute('href', href);
 }
+
+/** Current settings outside React (e.g. in callbacks). */
+export const getAppearance = (): Appearance => appearance;
 
 export function updateAppearance(patch: Partial<Appearance>): void {
   appearance = { ...appearance, ...patch };

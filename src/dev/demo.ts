@@ -205,7 +205,7 @@ export function installDemo(): void {
       createdPlaylists.unshift(created);
       return new Response(JSON.stringify(created), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
-    if (path.match(/^\/playlists\/[^/]+\/items$/) && (method === 'POST' || method === 'DELETE')) {
+    if (path.match(/^\/playlists\/[^/]+\/items$/) && (method === 'POST' || method === 'DELETE' || method === 'PUT')) {
       return json({ snapshot_id: 'demo' });
     }
     if (method === 'PUT' && path.match(/^\/playlists\/[^/]+$/)) return empty();

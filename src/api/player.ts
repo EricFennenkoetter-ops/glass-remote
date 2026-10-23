@@ -88,8 +88,15 @@ export const getRecentlyPlayed = async () =>
 export const getTopArtists = async () =>
   (await spotify<Paging<Artist>>('/me/top/artists', { query: { limit: 10, time_range: 'short_term' } }))?.items ?? [];
 
-export const getTopTracks = async () =>
-  (await spotify<Paging<Track>>('/me/top/tracks', { query: { limit: 10, time_range: 'short_term' } }))?.items ?? [];
+export type TopRange = 'short_term' | 'medium_term' | 'long_term';
+
+/** short_term ≈ 4 weeks, medium_term ≈ 6 months, long_term ≈ 1 year. Max 50. */
+export const getTopTracks = async (range: TopRange = 'short_term', limit = 10) =>
+  (await spotify<Paging<Track>>('/me/top/tracks', { query: { limit, time_range: range } }))?.items ?? [];
+
+/** Overwrites the whole playlist (max 100 uris). */
+export const replacePlaylistItems = (id: string, uris: string[]) =>
+  spotify(`/playlists/${encodeURIComponent(id)}/items`, { method: 'PUT', body: { uris } });
 
 // ---------- detail pages ----------
 

@@ -96,6 +96,8 @@ Der Code enthält dein Refresh-Token. Teile ihn mit niemandem.
 
 - **„…“-Menü bei jedem Titel und jeder Folge:** liken, zur Warteschlange, zu einer Playlist hinzufügen, aus der eigenen Playlist entfernen, Album bzw. Künstler anzeigen, teilen.
 - **Playlists:** erstellen (Bibliothek → „+“ oder „Neue Playlist“ beim Hinzufügen), bearbeiten (Name, Beschreibung, öffentlich), löschen. Alben, fremde Playlists, Podcasts und Hörbücher lassen sich per Herz speichern bzw. folgen. Das Herz im großen Player liked den laufenden Titel.
+- **Autoplay** (Einstellungen → Wiedergabe): Endet eine Playlist oder ein Album, geht es nach 3,5 s mit einem gemischten Mix aus deinen Top- und zuletzt gehörten Songs weiter. Erkannt wird das Ende daran, dass die Wiedergabe kurz vor Songende stoppt. Eine Pause mitten im Song löst nichts aus. Spotifys eigenes Autoplay (in der Spotify-App unter Einstellungen → Wiedergabe) hat Vorrang. „Ähnliche Songs“ gibt es nicht, weil Spotify die Empfehlungs-API für solche Apps abgeschaltet hat.
+- **Playlist „Meine Top-Songs“**: Die App legt sie einmal an und füllt sie beim Öffnen (höchstens alle 6 Stunden) mit deinen 50 meistgehörten Songs. Wählbar sind 4 Wochen, 6 Monate oder 1 Jahr. Ohne Server aktualisiert sie sich nur, wenn du die App öffnest.
 - **Nicht möglich** (keine Web-API): Songtexte, Jam, Downloads, DJ, Radio/Empfehlungen, Freundesaktivität, Schlaf-Timer, Künstlern folgen, Playlist-Cover hochladen.
 
 Start, Bibliothek und Bearbeiten brauchen zusätzliche Berechtigungen (siehe `PERSONAL_SCOPES` in `src/config.ts`). Sitzungen aus älteren Versionen sehen deshalb den Knopf „Neu mit Spotify verbinden“.

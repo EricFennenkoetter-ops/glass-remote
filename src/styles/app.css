@@ -1948,3 +1948,31 @@
     }
   }
 }
+
+/* ---------- Einstellungen: Wiedergabe ---------- */
+
+.toggle-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-row__hint {
+  color: var(--color-label-tertiary);
+  font-size: var(--font-size-footnote);
+  line-height: 1.35;
+}
+
+.toggle-row + .toggle-row {
+  margin-top: var(--space-xs);
+}
+
+.setting-group .segmented {
+  margin-top: var(--space-s);
+}
+
+.setting-action {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-s);
+}

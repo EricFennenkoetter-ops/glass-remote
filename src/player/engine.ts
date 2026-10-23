@@ -12,6 +12,10 @@ const SEEK_TOLERANCE_MS = 2500;
 const VOLUME_SEND_INTERVAL_MS = 300;
 const NETWORK_RETRY_MS = 5000;
 const PREFERRED_DEVICE_KEY = 'glass-remote.preferred-device';
+/** Playback that stops within this window before the song's end counts as "the context ended". */
+const END_WINDOW_MS = 4000;
+/** Older observations are useless (e.g. the app was in the background for a while). */
+const END_MAX_AGE_MS = 60_000;
 
 type PreferredDevice = { id: string; name: string };
 
@@ -81,6 +85,34 @@ export function createPlayerEngine() {
   };
   const listeners = new Set<() => void>();
 
+  // ---------- end-of-playback detection (for autoplay) ----------
+  let lastPlaying: { uri: string; remainingMs: number; at: number } | null = null;
+  let pausedByUser = false;
+  let endReported = false;
+  let onPlaybackEnded: ((lastUri: string) => void) | null = null;
+
+  /**
+   * Spotify stops when a playlist/album without repeat runs out. We see that as "was playing,
+   * almost at the end of the song – now stopped", which a pause in the middle of a song isn't.
+   */
+  function detectEnd(state: PlaybackState | null, now: number) {
+    if (state?.is_playing) {
+      if (state.item) {
+        lastPlaying = { uri: state.item.uri, remainingMs: state.item.duration_ms - (state.progress_ms ?? 0), at: now };
+      }
+      pausedByUser = false;
+      endReported = false;
+      return;
+    }
+    if (!lastPlaying || pausedByUser || endReported) return;
+    if (now - lastPlaying.at > END_MAX_AGE_MS) return;
+    if (state && state.repeat_state !== 'off') return;
+    const expectedRemaining = lastPlaying.remainingMs - (now - lastPlaying.at);
+    if (expectedRemaining > END_WINDOW_MS) return;
+    endReported = true;
+    onPlaybackEnded?.(lastPlaying.uri);
+  }
+
   let running = false;
   let timer: number | undefined;
   let polling = false;
@@ -149,6 +181,7 @@ export function createPlayerEngine() {
     try {
       const state = await api.getPlaybackState();
       const now = performance.now();
+      detectEnd(state?.device ? state : null, now);
       if (!state || !state.device) {
         raw = null;
         overrides = {};
@@ -306,6 +339,10 @@ export function createPlayerEngine() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
     },
     refresh: () => schedule(0),
+    /** Called once when a context ran out (not on a user pause). */
+    setPlaybackEndedHandler(handler: ((lastUri: string) => void) | null) {
+      onPlaybackEnded = handler;
+    },
 
     togglePlay() {
       const willPlay = !snapshot.playback?.is_playing;
@@ -313,6 +350,7 @@ export function createPlayerEngine() {
       const anchor = { ms: currentProgress(now), at: now };
       setOverride('isPlaying', willPlay);
       publish({ anchor });
+      if (!willPlay) pausedByUser = true;
       void command(willPlay ? () => api.play() : api.pause);
     },
     next() {

@@ -13,6 +13,7 @@ import { GlassButton } from './components/GlassButton';
 import { Toasts } from './components/Toasts';
 import { describeItem } from './lib/item';
 import type { MediaItem } from './lib/media';
+import { useAutomation } from './player/automation';
 import { MediaActionsProvider } from './player/MediaActions';
 import { usePlayer } from './player/usePlayer';
 import { MiniPlayer } from './components/MiniPlayer';
@@ -92,6 +93,7 @@ export function App() {
 
 function Remote() {
   const { player, snapshot } = usePlayer();
+  useAutomation(player);
   const [tab, setTab] = useState<TabId>('home');
   /** Detail pages opened inside the current tab (playlist → artist → album …). */
   const [pages, setPages] = useState<MediaItem[]>([]);

@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { ApiError } from '../api/client';
+import { GlassButton } from '../components/GlassButton';
 import { Sheet } from '../components/Sheet';
 import {
   ACCENTS,
@@ -6,19 +8,77 @@ import {
   BACKGROUNDS,
   DEFAULT_APPEARANCE,
   GLASS_LEVELS,
+  TOP_RANGES,
   updateAppearance,
   useAppearance,
   type Appearance,
 } from '../lib/appearance';
+import { showToast } from '../lib/toast';
 import { isStandalone } from '../auth/session';
+import { syncTopPlaylist } from '../player/automation';
 
 type AppearanceSheetProps = { open: boolean; onClose: () => void };
 
 export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
   const appearance = useAppearance();
+  const [syncing, setSyncing] = useState(false);
+
+  const syncNow = async () => {
+    setSyncing(true);
+    try {
+      const count = await syncTopPlaylist({ force: true });
+      showToast(count ? `„Meine Top-Songs“ aktualisiert (${count} Songs)` : 'Spotify hat noch keine Top-Songs für dich.', 'info');
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : 'Aktualisieren hat nicht geklappt.');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
-    <Sheet open={open} title="Darstellung" onClose={onClose}>
+    <Sheet open={open} title="Einstellungen" onClose={onClose}>
+      <SettingGroup title="Wiedergabe">
+        <label className="toggle-row">
+          <span>
+            Autoplay
+            <small className="toggle-row__hint">Wenn eine Playlist oder ein Album endet, geht es mit deinen Lieblingssongs weiter.</small>
+          </span>
+          <input
+            type="checkbox"
+            className="toggle"
+            checked={appearance.autoplay}
+            onChange={(event) => updateAppearance({ autoplay: event.target.checked })}
+          />
+        </label>
+        <label className="toggle-row">
+          <span>
+            Playlist „Meine Top-Songs“
+            <small className="toggle-row__hint">Wird bei jedem Öffnen der App mit deinen meistgehörten Songs aktualisiert.</small>
+          </span>
+          <input
+            type="checkbox"
+            className="toggle"
+            checked={appearance.topPlaylist}
+            onChange={(event) => updateAppearance({ topPlaylist: event.target.checked })}
+          />
+        </label>
+        {appearance.topPlaylist && (
+          <>
+            <Segmented
+              options={TOP_RANGES}
+              value={appearance.topRange}
+              onChange={(topRange) => updateAppearance({ topRange })}
+            />
+            <div className="setting-action">
+              <GlassButton variant="inner" size="pill" onClick={() => void syncNow()} disabled={syncing}>
+                {syncing && <span className="spinner" aria-hidden="true" />}
+                Jetzt aktualisieren
+              </GlassButton>
+            </div>
+          </>
+        )}
+      </SettingGroup>
+
       <SettingGroup title="Akzentfarbe">
         <div className="swatches" role="radiogroup" aria-label="Akzentfarbe">
           {(Object.keys(ACCENTS) as Appearance['accent'][]).map((key) => (

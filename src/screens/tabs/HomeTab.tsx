@@ -44,7 +44,7 @@ export function HomeTab({ player, snapshot, onOpenDevices, onOpenAppearance, onO
           <GlassButton variant="floating" size="s" aria-label="Geräte" onClick={onOpenDevices}>
             <Icon name="devices" size={20} />
           </GlassButton>
-          <GlassButton variant="floating" size="s" aria-label="Darstellung" onClick={onOpenAppearance}>
+          <GlassButton variant="floating" size="s" aria-label="Einstellungen" onClick={onOpenAppearance}>
             <Icon name="settings" size={20} />
           </GlassButton>
         </div>
