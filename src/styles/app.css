@@ -1484,6 +1484,290 @@
   font-weight: 700;
 }
 
+.tab-header__actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+/* ---------- Detail page (playlist, album, artist) ---------- */
+
+.detail {
+  animation: detail-in 420ms var(--motion-spring-smooth) both;
+}
+
+@keyframes detail-in {
+  from {
+    opacity: 0;
+    transform: translate3d(24px, 0, 0);
+  }
+}
+
+.detail__top {
+  margin-bottom: var(--space-xs);
+}
+
+.detail__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xs);
+  text-align: center;
+  text-shadow: var(--text-shadow-on-glass);
+}
+
+.detail__art {
+  display: grid;
+  place-items: center;
+  width: min(62vw, 240px);
+  aspect-ratio: 1;
+  margin-bottom: var(--space-m);
+  overflow: hidden;
+  border-radius: var(--radius-m);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-label-tertiary);
+  box-shadow:
+    0 24px 50px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.detail__art--round {
+  border-radius: 50%;
+}
+
+.detail__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail__title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.detail__subtitle {
+  color: var(--color-label-secondary);
+  font-size: 15px;
+}
+
+.detail__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-l);
+  margin: var(--space-l) 0 var(--space-xs);
+}
+
+.detail__play {
+  width: 64px;
+  height: 64px;
+}
+
+.list-row__number {
+  flex: none;
+  width: 28px;
+  color: var(--color-label-tertiary);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.list-row.is-current .list-row__number {
+  color: var(--color-accent);
+}
+
+.list-row__chevron {
+  flex: none;
+  color: var(--color-label-tertiary);
+}
+
+/* ---------- Darstellung (appearance settings) ---------- */
+
+.setting-group + .setting-group {
+  margin-top: var(--space-xs);
+}
+
+.setting-hint {
+  margin-top: var(--space-xs);
+  padding: 0 var(--space-s);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xs);
+  padding: 0 var(--space-xs);
+}
+
+.swatch,
+.icon-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: var(--radius-m);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-label-secondary);
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    transform 380ms var(--motion-spring-bouncy);
+}
+
+.swatch:active,
+.icon-choice:active {
+  transform: scale(var(--motion-press-scale));
+}
+
+.swatch.is-active,
+.icon-choice.is-active {
+  background: var(--glass-fill-regular);
+  box-shadow: var(--glass-highlight);
+  color: var(--color-label-primary);
+}
+
+.swatch__dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.swatch__dot--auto {
+  background: conic-gradient(from 200deg, #3be477, #7cc4ff, #b9a7ff, #ff8fc7, #ffb15c, #3be477);
+}
+
+.swatch.is-active .swatch__dot {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.segmented {
+  display: flex;
+  gap: 4px;
+  margin: 0 var(--space-xs);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.segmented__option {
+  flex: 1;
+  min-height: 36px;
+  border-radius: var(--radius-pill);
+  color: var(--color-label-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.segmented__option.is-active {
+  background: var(--glass-fill-prominent);
+  box-shadow: var(--glass-highlight);
+  color: var(--color-label-primary);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s);
+  min-height: var(--control-size-s);
+  padding: 0 var(--space-s);
+  font-size: 15px;
+}
+
+.toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 380ms var(--motion-spring-bouncy);
+}
+
+.toggle:checked {
+  background: var(--color-accent);
+}
+
+.toggle:checked::after {
+  transform: translateX(20px);
+}
+
+.icon-choices {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-xs);
+  padding: 0 var(--space-xs);
+}
+
+.icon-choice img {
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Glass strength */
+:root[data-glass='clear'] {
+  --glass-fill-clear: rgba(255, 255, 255, 0.05);
+  --glass-fill-regular: rgba(255, 255, 255, 0.08);
+  --glass-fill-prominent: rgba(255, 255, 255, 0.11);
+  --glass-tint-text: rgba(12, 12, 18, 0.26);
+  --glass-blur: blur(16px) saturate(170%);
+}
+
+:root[data-glass='thick'] {
+  --glass-fill-clear: rgba(255, 255, 255, 0.12);
+  --glass-fill-regular: rgba(255, 255, 255, 0.17);
+  --glass-fill-prominent: rgba(255, 255, 255, 0.22);
+  --glass-tint-text: rgba(12, 12, 18, 0.48);
+  --glass-blur: blur(36px) saturate(190%);
+}
+
+/* Background modes */
+:root[data-background='colors'] .backdrop__cover {
+  display: none;
+}
+
+:root[data-background='plain'] .backdrop__cover,
+:root[data-background='plain'] .backdrop__blob {
+  display: none;
+}
+
+:root[data-background='plain'] .backdrop {
+  background:
+    radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--color-accent) 22%, transparent), transparent 70%),
+    var(--color-background);
+}
+
+:root[data-motion='off'] .backdrop__blob {
+  animation: none;
+}
+
 /* ---------- Small / short screens ---------- */
 
 @media (max-height: 700px) {
@@ -1505,6 +1789,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .backdrop__blob,
+  .detail,
   .shortcut__playing i,
   .skeleton-block,
   .list-row--skeleton .list-row__art,

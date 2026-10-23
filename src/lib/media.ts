@@ -7,6 +7,8 @@ import { pickImage } from './item';
 
 /** Anything the user can tap to play: a track, album, artist or playlist. */
 export type MediaItem = {
+  /** Tracks play on tap; everything else opens its detail page. */
+  kind: 'track' | 'album' | 'playlist' | 'artist';
   key: string;
   /** The context this item starts (album/playlist/artist uri), used to highlight what's playing. */
   contextUri: string;
@@ -17,6 +19,8 @@ export type MediaItem = {
   imageLarge: string | null;
   round?: boolean;
   placeholderIcon: IconName;
+  /** Shown instead of the artwork, e.g. the track number on album pages. */
+  leading?: string;
   meta?: string;
   play: PlayRequest;
   /** Used if `play` is rejected (e.g. track not in its album context). */
@@ -26,6 +30,7 @@ export type MediaItem = {
 
 export function trackItem(track: Track): MediaItem {
   return {
+    kind: 'track',
     key: track.uri,
     contextUri: track.album.uri,
     title: track.name,
@@ -43,6 +48,7 @@ export function trackItem(track: Track): MediaItem {
 
 export function artistItem(artist: Artist): MediaItem {
   return {
+    kind: 'artist',
     key: artist.uri,
     contextUri: artist.uri,
     title: artist.name,
@@ -58,6 +64,7 @@ export function artistItem(artist: Artist): MediaItem {
 export function albumItem(album: AlbumSummary): MediaItem {
   const kind = album.album_type === 'single' ? 'Single' : 'Album';
   return {
+    kind: 'album',
     key: album.uri,
     contextUri: album.uri,
     title: album.name,
@@ -72,6 +79,7 @@ export function albumItem(album: AlbumSummary): MediaItem {
 export function playlistItem(playlist: SimplifiedPlaylist): MediaItem {
   const count = playlist.items?.total ?? playlist.tracks?.total;
   return {
+    kind: 'playlist',
     key: playlist.uri,
     contextUri: playlist.uri,
     title: playlist.name,
@@ -82,6 +90,32 @@ export function playlistItem(playlist: SimplifiedPlaylist): MediaItem {
     play: { contextUri: playlist.uri },
   };
 }
+
+/** A track on a detail page: plays inside that page's context so "next" continues there. */
+export function contextTrackItem(
+  track: Omit<Track, 'album'> & { album?: Track['album'] },
+  contextUri: string,
+  leading?: string,
+): MediaItem {
+  return {
+    kind: 'track',
+    key: track.uri,
+    contextUri,
+    title: track.name,
+    subtitle: track.artists.map((artist) => artist.name).join(', '),
+    image: track.album ? pickImage(track.album.images, 60) : null,
+    imageLarge: null,
+    placeholderIcon: 'music',
+    leading,
+    meta: formatTime(track.duration_ms),
+    play: { contextUri, offsetUri: track.uri },
+    fallback: { uris: [track.uri] },
+    queueUri: track.uri,
+  };
+}
+
+/** "spotify:playlist:abc" → "abc" */
+export const idFromUri = (uri: string) => uri.split(':').pop() ?? '';
 
 export function present<T>(paging: Paging<T> | undefined): T[] {
   return (paging?.items ?? []).filter(isPresent);

@@ -162,6 +162,55 @@ export function installDemo(): void {
         playlists: paging(hits.length ? [null, { type: 'playlist', uri: 'spotify:playlist:demo', name: `Das ist ${hits[0]?.artists[0]?.name}`, images: hits[0]?.album.images, owner: { display_name: 'Spotify' }, items: { total: 50 } }] : []),
       });
     }
+    const playlistMatch = path.match(/^\/playlists\/([^/]+)(\/items)?$/);
+    if (method === 'GET' && playlistMatch) {
+      const [, id, items] = playlistMatch;
+      const index = Number(id?.replace('mine', '')) || 0;
+      if (items) {
+        // Like the real API: only own playlists expose their contents.
+        if (!id?.startsWith('mine')) {
+          return new Response(JSON.stringify({ error: { status: 403, message: 'Forbidden' } }), { status: 403 });
+        }
+        const entries = Array.from({ length: 12 }, (_, i) => ({ item: tracks[(index + i) % tracks.length] }));
+        return json({ items: entries, total: entries.length, next: null });
+      }
+      return json({
+        type: 'playlist',
+        uri: `spotify:playlist:${id}`,
+        name: id?.startsWith('mine') ? ['Chill am Abend', 'Sommer 2026', 'Autofahrt', 'Fokus'][index] : 'Fremde Playlist',
+        description: null,
+        images: tracks[index % tracks.length]!.album.images,
+        owner: { display_name: id?.startsWith('mine') ? 'Eric' : 'Spotify' },
+      });
+    }
+    const albumMatch = path.match(/^\/albums\/demo(\d+)$/);
+    if (method === 'GET' && albumMatch) {
+      const track = tracks[Number(albumMatch[1])]!;
+      const albumTracks = Array.from({ length: 9 }, (_, i) =>
+        i === 0
+          ? { ...track, track_number: 1 }
+          : { ...track, uri: `${track.uri}-${i}`, name: `${track.name} (Teil ${i + 1})`, track_number: i + 1 },
+      );
+      return json({
+        type: 'album',
+        uri: track.album.uri,
+        name: track.album.name,
+        album_type: 'album',
+        release_date: '2025-03-14',
+        artists: track.artists,
+        images: track.album.images,
+        tracks: { items: albumTracks, total: albumTracks.length, next: null },
+      });
+    }
+    const artistMatch = path.match(/^\/artists\/demo(\d+)(\/albums)?$/);
+    if (method === 'GET' && artistMatch) {
+      const track = tracks[Number(artistMatch[1]) % tracks.length]!;
+      if (artistMatch[2]) {
+        const albums = tracks.map((t) => ({ type: 'album', uri: t.album.uri, name: t.album.name, album_type: 'album', release_date: '2024-01-01', artists: track.artists, images: t.album.images }));
+        return json({ items: albums, total: albums.length, next: null });
+      }
+      return json({ type: 'artist', uri: `spotify:artist:demo${artistMatch[1]}`, name: track.artists[0]?.name, images: track.album.images });
+    }
     if (method === 'GET' && path === '/me/player/recently-played') {
       const items = [2, 0, 3, 1, 2, 0].map((index, i) => ({
         track: tracks[index],

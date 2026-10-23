@@ -16,8 +16,8 @@
   --color-background: #0b0b10;
   --color-danger: #ff6b6b;
 
-  /* Dynamic, set from the cover palette (see useCoverPalette) */
-  --color-accent: #b9a7ff;
+  /* Dynamic: user override (Darstellung) wins over the colour taken from the cover (Background) */
+  --color-accent: var(--accent-override, var(--palette-accent, #b9a7ff));
   --color-blob-1: #6d28d9;
   --color-blob-2: #be185d;
   --color-blob-3: #0f766e;

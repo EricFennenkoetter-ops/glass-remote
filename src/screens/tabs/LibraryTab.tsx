@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { MediaList } from '../../components/MediaList';
+import type { MediaItem } from '../../lib/media';
 import type { PlayerEngine, PlayerSnapshot } from '../../player/engine';
 import { usePersonalData } from '../../player/usePersonalData';
 import { useStartItem } from '../../player/useStartItem';
 import { ReconnectCard } from './TabParts';
 
-type LibraryTabProps = { player: PlayerEngine; snapshot: PlayerSnapshot };
+type LibraryTabProps = { player: PlayerEngine; snapshot: PlayerSnapshot; onOpenDetail: (item: MediaItem) => void };
 
 const FILTERS = [
   { id: 'playlists', label: 'Playlists' },
@@ -15,9 +16,9 @@ const FILTERS = [
 
 type Filter = (typeof FILTERS)[number]['id'];
 
-export function LibraryTab({ player, snapshot }: LibraryTabProps) {
+export function LibraryTab({ player, snapshot, onOpenDetail }: LibraryTabProps) {
   const personal = usePersonalData();
-  const { startingKey, start } = useStartItem(player);
+  const { startingKey, activate } = useStartItem(player, onOpenDetail);
   const [filter, setFilter] = useState<Filter>('playlists');
 
   return (
@@ -55,7 +56,8 @@ export function LibraryTab({ player, snapshot }: LibraryTabProps) {
           }
           startingKey={startingKey}
           playingContextUri={snapshot.playback?.context?.uri ?? null}
-          onStart={start}
+          playingItemUri={snapshot.playback?.item?.uri ?? null}
+          onStart={activate}
           onQueue={(uri) => void player.addToQueue(uri)}
         />
       )}

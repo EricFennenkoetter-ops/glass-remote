@@ -23,7 +23,7 @@ npm run dev            # → http://127.0.0.1:5173/
 | `npm run dev` | Dev-Server auf 127.0.0.1:5173 |
 | `npm run build` | Typecheck und Produktions-Build nach `dist/` |
 | `npm run preview` | Build lokal ansehen (127.0.0.1:4173) |
-| `npm run icons` | App-Icons neu rendern (`scripts/generate-icons.mjs`) |
+| `npm run icons` | App-Icons neu rendern (`scripts/generate-icons.mjs`, mit `-- --preview datei.png` als Vorschaubild) |
 
 ## Checkliste: Was du im Spotify-Dashboard einträgst
 
@@ -85,6 +85,9 @@ Der Code enthält dein Refresh-Token. Teile ihn mit niemandem.
 - **Suchen:** Titel, Künstler, Alben und Playlists, höchstens 10 Treffer pro Typ (Limit im Development Mode). Antippen spielt ab, „+“ hängt einen Titel an die Warteschlange.
 - **Bibliothek:** Playlists, Top-Künstler und zuletzt gehörte Titel.
 - **Gerätewahl:** Läuft nichts und es ist unklar, wo abgespielt werden soll, fragt die App „Wo abspielen?“ und merkt sich die Wahl. Fehlt das iPhone in der Liste, schläft die Spotify-App dort. Der Knopf „Spotify-App öffnen“ weckt sie auf.
+
+- **Detailseiten:** Playlists, Alben und Künstler öffnen sich mit ihrer Titelliste, statt sofort abzuspielen. Zum Abspielen den großen ▶︎-Knopf, Zufall oder einen einzelnen Titel antippen. Bei fremden Playlists liefert Spotify im Development Mode keine Titel. Abspielen geht trotzdem. Künstlerseiten zeigen Alben und Singles, weil „Top-Titel“ im Development Mode entfernt wurde.
+- **Darstellung (Zahnrad auf der Startseite):** Akzentfarbe (vom Cover oder fest), Hintergrund (Cover / Nur Farben / Schlicht), Glasstärke, Bewegung der Farbflecken und App-Icon. Die Einstellungen gelten pro Gerät. Ein neues App-Icon übernimmt iOS erst, wenn du die Seite neu zum Home-Bildschirm hinzufügst.
 
 Start und Bibliothek brauchen die Berechtigungen `playlist-read-private`, `playlist-read-collaborative`, `user-read-recently-played` und `user-top-read`. Sitzungen aus älteren Versionen sehen deshalb den Knopf „Neu mit Spotify verbinden“.
 

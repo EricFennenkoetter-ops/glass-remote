@@ -4,6 +4,9 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/glass.css';
 import './styles/app.css';
+import { applyAppearance } from './lib/appearance';
+
+applyAppearance();
 
 // iOS ignores user-scalable=no in some contexts; block pinch zoom explicitly.
 document.addEventListener('gesturestart', (event) => event.preventDefault());

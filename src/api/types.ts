@@ -138,3 +138,13 @@ export type SearchResponse = {
 export type RecentlyPlayedResponse = {
   items: { track: Track; played_at: string; context: { uri: string; type: string } | null }[];
 };
+
+/** Track inside an album response – no album object of its own. */
+export type SimplifiedTrack = Omit<Track, 'album'> & { track_number: number };
+
+export type FullAlbum = SimplifiedAlbum & { tracks: Paging<SimplifiedTrack> };
+
+/** Since Feb 2026 the track/episode lives under `item`; `track` is the deprecated alias. */
+export type PlaylistEntry = { item?: PlayableItem | null; track?: PlayableItem | null };
+
+export type FullPlaylist = SimplifiedPlaylist & { description: string | null };

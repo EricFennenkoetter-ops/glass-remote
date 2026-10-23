@@ -8,7 +8,7 @@ import { usePersonalData } from '../../player/usePersonalData';
 import { useStartItem } from '../../player/useStartItem';
 import { TabSection } from './TabParts';
 
-type SearchTabProps = { player: PlayerEngine; snapshot: PlayerSnapshot };
+type SearchTabProps = { player: PlayerEngine; snapshot: PlayerSnapshot; onOpenDetail: (item: MediaItem) => void };
 
 type Section = { title: string; items: MediaItem[] };
 
@@ -23,10 +23,11 @@ const SEARCH_DEBOUNCE_MS = 300;
 // Kept across tab switches, like Spotify does.
 let lastQuery = '';
 
-export function SearchTab({ player, snapshot }: SearchTabProps) {
+export function SearchTab({ player, snapshot, onOpenDetail }: SearchTabProps) {
   const [query, setQuery] = useState(lastQuery);
   const [results, setResults] = useState<ResultsState>({ status: 'idle' });
-  const { startingKey, start } = useStartItem(player);
+  const { startingKey, activate } = useStartItem(player, onOpenDetail);
+  const playingItemUri = snapshot.playback?.item?.uri ?? null;
   const personal = usePersonalData();
   const inputRef = useRef<HTMLInputElement>(null);
   const trimmed = query.trim();
@@ -113,7 +114,13 @@ export function SearchTab({ player, snapshot }: SearchTabProps) {
 
       {!trimmed && personal.status === 'ready' && personal.data.recentTracks.length > 0 && (
         <TabSection title="Zuletzt gehört">
-          <MediaList items={personal.data.recentTracks} startingKey={startingKey} onStart={start} onQueue={onQueue} />
+          <MediaList
+            items={personal.data.recentTracks}
+            startingKey={startingKey}
+            playingItemUri={playingItemUri}
+            onStart={activate}
+            onQueue={onQueue}
+          />
         </TabSection>
       )}
       {results.status === 'error' && <p className="sheet__message sheet__message--error">{results.message}</p>}
@@ -127,7 +134,8 @@ export function SearchTab({ player, snapshot }: SearchTabProps) {
               items={section.items}
               startingKey={startingKey}
               playingContextUri={playingContextUri}
-              onStart={start}
+              playingItemUri={playingItemUri}
+              onStart={activate}
               onQueue={onQueue}
             />
           </TabSection>

@@ -12,14 +12,17 @@ import { Background } from './components/Background';
 import { GlassButton } from './components/GlassButton';
 import { Toasts } from './components/Toasts';
 import { describeItem } from './lib/item';
+import type { MediaItem } from './lib/media';
 import { usePlayer } from './player/usePlayer';
 import { MiniPlayer } from './components/MiniPlayer';
 import { TabBar, type TabId } from './components/TabBar';
+import { AppearanceSheet } from './screens/AppearanceSheet';
 import { DevicesSheet } from './screens/DevicesSheet';
 import { Login } from './screens/Login';
 import { MessageScreen } from './screens/MessageScreen';
 import { PlayerOverlay } from './screens/PlayerOverlay';
 import { QueueSheet } from './screens/QueueSheet';
+import { DetailPage } from './screens/tabs/DetailPage';
 import { HomeTab } from './screens/tabs/HomeTab';
 import { LibraryTab } from './screens/tabs/LibraryTab';
 import { SearchTab } from './screens/tabs/SearchTab';
@@ -89,7 +92,9 @@ export function App() {
 function Remote() {
   const { player, snapshot } = usePlayer();
   const [tab, setTab] = useState<TabId>('home');
-  const [sheet, setSheet] = useState<'queue' | 'devices' | null>(null);
+  /** Detail pages opened inside the current tab (playlist → artist → album …). */
+  const [pages, setPages] = useState<MediaItem[]>([]);
+  const [sheet, setSheet] = useState<'queue' | 'devices' | 'appearance' | null>(null);
   const [playerOpen, setPlayerOpen] = useState(false);
   const closeSheet = useCallback(() => {
     setSheet(null);
@@ -98,6 +103,15 @@ function Remote() {
   const openDevices = useCallback(() => setSheet('devices'), []);
   const openQueue = useCallback(() => setSheet('queue'), []);
   const closePlayer = useCallback(() => setPlayerOpen(false), []);
+  const openAppearance = useCallback(() => setSheet('appearance'), []);
+  const openDetail = useCallback((item: MediaItem) => setPages((stack) => [...stack, item]), []);
+  const goBack = useCallback(() => setPages((stack) => stack.slice(0, -1)), []);
+  // Like Spotify: switching tabs – or tapping the current one – returns to the tab's root.
+  const changeTab = useCallback((next: TabId) => {
+    setTab(next);
+    setPages([]);
+  }, []);
+  const currentPage = pages.at(-1);
 
   const item = snapshot.playback?.item ?? null;
   const info = useMemo(() => (item ? describeItem(item) : null), [item]);
@@ -129,10 +143,34 @@ function Remote() {
     <>
       <Background imageUrl={info?.imageSmall ?? null} paletteSourceUrl={info?.imageMedium ?? null} />
       <div className="tabs-dim" aria-hidden="true" />
-      <main className={`tab-screen${snapshot.status === 'loading' ? '' : ' has-mini-player'}`} key={tab}>
-        {tab === 'home' && <HomeTab player={player} snapshot={snapshot} onOpenDevices={openDevices} />}
-        {tab === 'search' && <SearchTab player={player} snapshot={snapshot} />}
-        {tab === 'library' && <LibraryTab player={player} snapshot={snapshot} />}
+      <main
+        className={`tab-screen${snapshot.status === 'loading' ? '' : ' has-mini-player'}`}
+        key={`${tab}-${pages.length}`}
+      >
+        {currentPage ? (
+          <DetailPage
+            key={currentPage.key}
+            item={currentPage}
+            player={player}
+            snapshot={snapshot}
+            onBack={goBack}
+            onOpenDetail={openDetail}
+          />
+        ) : (
+          <>
+            {tab === 'home' && (
+              <HomeTab
+                player={player}
+                snapshot={snapshot}
+                onOpenDevices={openDevices}
+                onOpenAppearance={openAppearance}
+                onOpenDetail={openDetail}
+              />
+            )}
+            {tab === 'search' && <SearchTab player={player} snapshot={snapshot} onOpenDetail={openDetail} />}
+            {tab === 'library' && <LibraryTab player={player} snapshot={snapshot} onOpenDetail={openDetail} />}
+          </>
+        )}
       </main>
       <div className="bottom-chrome">
         <MiniPlayer
@@ -142,7 +180,7 @@ function Remote() {
           onOpen={() => setPlayerOpen(true)}
           onOpenDevices={openDevices}
         />
-        <TabBar active={tab} onChange={setTab} />
+        <TabBar active={tab} onChange={changeTab} />
       </div>
       <PlayerOverlay
         open={playerOpen && snapshot.status === 'active'}
@@ -153,6 +191,7 @@ function Remote() {
         onOpenQueue={openQueue}
         onOpenDevices={openDevices}
       />
+      <AppearanceSheet open={sheet === 'appearance'} onClose={closeSheet} />
       <QueueSheet open={sheet === 'queue'} onClose={closeSheet} currentKey={info?.key ?? null} />
       <DevicesSheet
         open={sheet === 'devices'}

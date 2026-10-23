@@ -9,6 +9,10 @@ import type {
   SearchResponse,
   SimplifiedPlaylist,
   Artist,
+  FullAlbum,
+  FullPlaylist,
+  PlaylistEntry,
+  SimplifiedAlbum,
   Track,
 } from './types';
 
@@ -77,3 +81,49 @@ export const getTopArtists = async () =>
 
 export const getTopTracks = async () =>
   (await spotify<Paging<Track>>('/me/top/tracks', { query: { limit: 10, time_range: 'short_term' } }))?.items ?? [];
+
+// ---------- detail pages ----------
+
+const MAX_DETAIL_PAGES = 4;
+
+/** Follows `next` links (absolute URLs) up to a few pages. */
+async function collectPages<T>(first: Paging<T> | null): Promise<T[]> {
+  const items = [...(first?.items ?? [])].filter((item): item is T => item !== null);
+  let next = first?.next ?? null;
+  for (let page = 1; next && page < MAX_DETAIL_PAGES; page++) {
+    const response: Paging<T> | null = await spotify<Paging<T>>(next.replace(/^https:\/\/api\.spotify\.com\/v1/, ''));
+    items.push(...(response?.items ?? []).filter((item): item is T => item !== null));
+    next = response?.next ?? null;
+  }
+  return items;
+}
+
+export const getPlaylist = (id: string) =>
+  spotify<FullPlaylist>(`/playlists/${encodeURIComponent(id)}`);
+
+/** Only works for playlists the user owns or collaborates on (403 otherwise). */
+export const getPlaylistTracks = async (id: string): Promise<Track[]> => {
+  const entries = await collectPages(
+    await spotify<Paging<PlaylistEntry>>(`/playlists/${encodeURIComponent(id)}/items`, {
+      query: { limit: 50, additional_types: 'track' },
+    }),
+  );
+  return entries
+    .map((entry) => entry.item ?? entry.track ?? null)
+    .filter((item): item is Track => item?.type === 'track');
+};
+
+export const getAlbum = async (id: string) => {
+  const album = await spotify<FullAlbum>(`/albums/${encodeURIComponent(id)}`);
+  if (!album) return null;
+  return { album, tracks: await collectPages(album.tracks) };
+};
+
+export const getArtist = (id: string) => spotify<Artist>(`/artists/${encodeURIComponent(id)}`);
+
+export const getArtistAlbums = async (id: string) =>
+  (
+    await spotify<Paging<SimplifiedAlbum>>(`/artists/${encodeURIComponent(id)}/albums`, {
+      query: { include_groups: 'album,single', limit: 10 },
+    })
+  )?.items.filter((album): album is SimplifiedAlbum => album !== null) ?? [];

@@ -11,6 +11,8 @@ type HomeTabProps = {
   player: PlayerEngine;
   snapshot: PlayerSnapshot;
   onOpenDevices: () => void;
+  onOpenAppearance: () => void;
+  onOpenDetail: (item: MediaItem) => void;
 };
 
 function greeting(date = new Date()): string {
@@ -21,11 +23,11 @@ function greeting(date = new Date()): string {
   return 'Guten Abend';
 }
 
-export function HomeTab({ player, snapshot, onOpenDevices }: HomeTabProps) {
+export function HomeTab({ player, snapshot, onOpenDevices, onOpenAppearance, onOpenDetail }: HomeTabProps) {
   const personal = usePersonalData();
-  const { startingKey, start } = useStartItem(player);
+  const { startingKey, activate } = useStartItem(player, onOpenDetail);
   const playingContextUri = snapshot.playback?.context?.uri ?? null;
-  const shared = { startingKey, playingContextUri, onStart: start };
+  const shared = { startingKey, playingContextUri, onStart: activate };
 
   const carousel = (title: string, items: MediaItem[]) =>
     items.length > 0 && (
@@ -38,9 +40,14 @@ export function HomeTab({ player, snapshot, onOpenDevices }: HomeTabProps) {
     <>
       <header className="tab-header">
         <h1 className="tab-header__title">{greeting()}</h1>
-        <GlassButton variant="floating" size="s" aria-label="Geräte" onClick={onOpenDevices}>
-          <Icon name="devices" size={20} />
-        </GlassButton>
+        <div className="tab-header__actions">
+          <GlassButton variant="floating" size="s" aria-label="Geräte" onClick={onOpenDevices}>
+            <Icon name="devices" size={20} />
+          </GlassButton>
+          <GlassButton variant="floating" size="s" aria-label="Darstellung" onClick={onOpenAppearance}>
+            <Icon name="settings" size={20} />
+          </GlassButton>
+        </div>
       </header>
 
       {snapshot.notice && (

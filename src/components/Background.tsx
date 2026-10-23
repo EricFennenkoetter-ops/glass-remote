@@ -36,7 +36,7 @@ export function Background({ imageUrl, paletteSourceUrl }: BackgroundProps) {
   useEffect(() => {
     const { palette } = scene.scene;
     const root = document.documentElement.style;
-    root.setProperty('--color-accent', palette.accent);
+    root.setProperty('--palette-accent', palette.accent);
     // Brighter covers → darker scrim, so white labels keep ≥ 4.5:1 on the glass.
     root.setProperty('--scrim-strength', Math.min(0.62, 0.3 + palette.luminance * 0.6).toFixed(3));
   }, [scene]);
