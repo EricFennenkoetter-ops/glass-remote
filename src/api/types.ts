@@ -19,7 +19,7 @@ export type Track = {
   uri: string;
   name: string;
   duration_ms: number;
-  artists: { name: string }[];
+  artists: { name: string; uri?: string }[];
   album: AlbumSummary;
 };
 
@@ -154,7 +154,9 @@ export type SimplifiedPlaylist = {
   uri: string;
   name: string;
   images: SpotifyImage[] | null;
-  owner: { display_name: string | null };
+  owner: { id?: string; display_name: string | null };
+  public?: boolean | null;
+  description?: string | null;
   /** Current field for the item count; `tracks` is the deprecated predecessor. */
   items?: { total: number };
   tracks?: { total: number };
@@ -190,3 +192,5 @@ export type FullPlaylist = SimplifiedPlaylist & { description: string | null };
 export type SavedTrack = { added_at: string; track: Track };
 export type SavedAlbum = { added_at: string; album: SimplifiedAlbum };
 export type SavedShow = { added_at: string; show: Show };
+
+export type CurrentUser = { id: string; display_name: string | null; images?: SpotifyImage[] };

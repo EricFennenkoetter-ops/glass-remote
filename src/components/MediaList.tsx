@@ -1,4 +1,5 @@
 import { isPlayable, type MediaItem } from '../lib/media';
+import { useMediaActions } from '../player/MediaActions';
 import { Icon } from './Icon';
 
 type MediaListProps = {
@@ -9,10 +10,12 @@ type MediaListProps = {
   playingContextUri?: string | null;
   playingItemUri?: string | null;
   onStart: (item: MediaItem) => void;
-  onQueue?: (uri: string) => void;
+  /** The playlist page this list belongs to (enables "Aus dieser Playlist entfernen"). */
+  menuPlaylist?: MediaItem;
 };
 
-export function MediaList({ items, startingKey, playingContextUri, playingItemUri, onStart, onQueue }: MediaListProps) {
+export function MediaList({ items, startingKey, playingContextUri, playingItemUri, onStart, menuPlaylist }: MediaListProps) {
+  const { openMenu } = useMediaActions();
   return (
     <ul className="list">
       {items.map((item, index) => (
@@ -51,14 +54,14 @@ export function MediaList({ items, startingKey, playingContextUri, playingItemUr
               <Icon name="chevronRight" size={18} className="list-row__chevron" />
             )}
           </button>
-          {item.queueUri && onQueue && (
+          {item.kind !== 'liked' && (
             <button
               type="button"
               className="list-row__action"
-              aria-label={`${item.title} zur Warteschlange hinzufügen`}
-              onClick={() => onQueue(item.queueUri!)}
+              aria-label={`Weitere Optionen für ${item.title}`}
+              onClick={() => openMenu(item, { playlist: menuPlaylist })}
             >
-              <Icon name="addToQueue" size={20} />
+              <Icon name="more" size={20} />
             </button>
           )}
         </li>

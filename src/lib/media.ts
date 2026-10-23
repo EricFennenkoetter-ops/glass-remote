@@ -27,7 +27,28 @@ export type MediaItem = {
   /** Used if `play` is rejected (e.g. track not in its album context). */
   fallback?: PlayRequest;
   queueUri?: string;
+  /** Playlists: Spotify user id of the owner (to know whether it can be edited). */
+  ownerId?: string;
+  /** "Album anzeigen" / "Künstler anzeigen" in the … menu. */
+  links?: { album?: MediaItem; artist?: MediaItem };
 };
+
+/** The real Spotify uri behind an item (tracks/episodes: the item, collections: the context). */
+export const spotifyUri = (item: MediaItem) => (isPlayable(item) ? item.key : item.contextUri);
+
+/** https://open.spotify.com/… link for sharing, or null for local-only items (Lieblingssongs). */
+export function shareUrl(item: MediaItem): string | null {
+  const [scheme, type, id] = spotifyUri(item).split(':');
+  return scheme === 'spotify' && type && id ? `https://open.spotify.com/${type}/${id}` : null;
+}
+
+function trackLinks(track: Pick<Track, 'artists'> & { album?: Track['album'] }): MediaItem['links'] {
+  const artist = track.artists.find((a) => a.uri);
+  return {
+    album: track.album?.uri ? albumItem(track.album) : undefined,
+    artist: artist?.uri ? artistItem({ type: 'artist', uri: artist.uri, name: artist.name, images: [] }) : undefined,
+  };
+}
 
 export function trackItem(track: Track): MediaItem {
   return {
@@ -44,6 +65,7 @@ export function trackItem(track: Track): MediaItem {
     play: { contextUri: track.album.uri, offsetUri: track.uri },
     fallback: { uris: [track.uri] },
     queueUri: track.uri,
+    links: trackLinks(track),
   };
 }
 
@@ -89,6 +111,7 @@ export function playlistItem(playlist: SimplifiedPlaylist): MediaItem {
     imageLarge: pickImage(playlist.images ?? [], 280),
     placeholderIcon: 'queue',
     play: { contextUri: playlist.uri },
+    ownerId: playlist.owner.id,
   };
 }
 
@@ -112,6 +135,7 @@ export function contextTrackItem(
     play: { contextUri, offsetUri: track.uri },
     fallback: { uris: [track.uri] },
     queueUri: track.uri,
+    links: trackLinks(track),
   };
 }
 
@@ -129,7 +153,7 @@ export function likedSongsItem(count: number | null): MediaItem {
     subtitle: count === null ? 'Playlist' : `Playlist · ${count} Titel`,
     image: null,
     imageLarge: null,
-    placeholderIcon: 'heart',
+    placeholderIcon: 'heartFilled',
     artStyle: 'liked',
     // The detail page plays the loaded songs (Spotify has no context uri for them).
     play: { uris: [] },

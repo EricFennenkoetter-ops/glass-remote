@@ -21,6 +21,7 @@ import type {
   SavedShow,
   SavedTrack,
   Show,
+  CurrentUser,
 } from './types';
 
 // https://developer.spotify.com/documentation/web-api/reference/#category-player
@@ -162,3 +163,32 @@ export const getAudiobook = (id: string) => spotify<Audiobook>(`/audiobooks/${en
 
 export const getAudiobookChapters = async (id: string) =>
   collectPages(await spotify<Paging<Chapter>>(`/audiobooks/${encodeURIComponent(id)}/chapters`, { query: { limit: 50 } }));
+
+// ---------- editing: playlists & library ----------
+
+export const getMe = () => spotify<CurrentUser>('/me');
+
+export type PlaylistDetails = { name: string; description: string; public: boolean };
+
+export const createPlaylist = (details: PlaylistDetails) =>
+  spotify<SimplifiedPlaylist>('/me/playlists', { method: 'POST', body: details });
+
+export const updatePlaylist = (id: string, details: PlaylistDetails) =>
+  spotify(`/playlists/${encodeURIComponent(id)}`, { method: 'PUT', body: details });
+
+/** Max 100 per request. */
+export const addToPlaylist = (id: string, uris: string[]) =>
+  spotify(`/playlists/${encodeURIComponent(id)}/items`, { method: 'POST', body: { uris } });
+
+export const removeFromPlaylist = (id: string, uris: string[]) =>
+  spotify(`/playlists/${encodeURIComponent(id)}/items`, { method: 'DELETE', body: { items: uris.map((uri) => ({ uri })) } });
+
+/** Like songs, save albums/podcasts/audiobooks, follow playlists. Max 40 uris. */
+export const saveToLibrary = (uris: string[]) => spotify('/me/library', { method: 'PUT', query: { uris: uris.join(',') } });
+
+/** Unlike / unsave / unfollow – unfollowing your own playlist deletes it for you. Max 40 uris. */
+export const removeFromLibrary = (uris: string[]) =>
+  spotify('/me/library', { method: 'DELETE', query: { uris: uris.join(',') } });
+
+export const libraryContains = async (uris: string[]) =>
+  (await spotify<boolean[]>('/me/library/contains', { query: { uris: uris.join(',') } })) ?? uris.map(() => false);

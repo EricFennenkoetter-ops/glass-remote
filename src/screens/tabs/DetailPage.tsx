@@ -28,7 +28,9 @@ import {
   LIKED_SONGS_URI,
   type MediaItem,
 } from '../../lib/media';
-import { cachedLikedTracks } from '../../player/usePersonalData';
+import { setSaved, useSaved } from '../../player/library';
+import { useMediaActions } from '../../player/MediaActions';
+import { cachedLikedTracks, useLibraryVersion } from '../../player/usePersonalData';
 import type { PlayerEngine, PlayerSnapshot } from '../../player/engine';
 import { useStartItem } from '../../player/useStartItem';
 import { TabSection } from './TabParts';
@@ -68,6 +70,12 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
   const { startingKey, start, activate } = useStartItem(player, onOpenDetail);
   const playback = snapshot.playback;
   const isThisPlaying = playback?.context?.uri === item.contextUri && playback.is_playing;
+  const { openMenu, isOwnPlaylist } = useMediaActions();
+  const own = isOwnPlaylist(item);
+  // Own playlists are always in the library; artists and Lieblingssongs can't be saved via the API.
+  const canSave = item.kind !== 'artist' && item.kind !== 'liked' && !own;
+  const isSaved = useSaved(canSave ? item.contextUri : null);
+  const libraryVersion = useLibraryVersion();
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +85,7 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
     return () => {
       cancelled = true;
     };
-  }, [item]);
+  }, [item, libraryVersion]);
 
   const content = state.status === 'ready' ? state.content : null;
   const image = content?.image ?? item.imageLarge;
@@ -103,6 +111,26 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
         <GlassButton variant="floating" size="s" aria-label="Zurück" onClick={onBack}>
           <Icon name="chevronLeft" size={22} />
         </GlassButton>
+        <div className="tab-header__actions">
+          {canSave && (
+            <GlassButton
+              variant="floating"
+              size="s"
+              active={isSaved === true}
+              className="heart-button"
+              aria-pressed={isSaved === true}
+              aria-label={isSaved ? 'Aus Bibliothek entfernen' : 'In Bibliothek speichern'}
+              onClick={() => void setSaved(item.contextUri, !isSaved)}
+            >
+              <Icon name={isSaved ? 'heartFilled' : 'heart'} size={20} />
+            </GlassButton>
+          )}
+          {item.kind !== 'liked' && (
+            <GlassButton variant="floating" size="s" aria-label="Weitere Optionen" onClick={() => openMenu(item)}>
+              <Icon name="more" size={20} />
+            </GlassButton>
+          )}
+        </div>
       </header>
 
       <div className="detail__hero">
@@ -157,7 +185,7 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
             startingKey={startingKey}
             playingItemUri={playback?.item?.uri ?? null}
             onStart={activate}
-            onQueue={(uri) => void player.addToQueue(uri)}
+            menuPlaylist={item.kind === 'playlist' ? item : undefined}
           />
         </TabSection>
       )}

@@ -6,6 +6,9 @@ import { deviceIcon, Icon } from '../components/Icon';
 import { ProgressBar } from '../components/ProgressBar';
 import { VolumeSlider } from '../components/VolumeSlider';
 import type { ItemInfo } from '../lib/item';
+import { episodeItem, trackItem } from '../lib/media';
+import { setSaved, useSaved } from '../player/library';
+import { useMediaActions } from '../player/MediaActions';
 import type { PlayerEngine, PlayerSnapshot } from '../player/engine';
 
 type NowPlayingProps = {
@@ -33,6 +36,18 @@ export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices,
   const isPlaying = playback?.is_playing ?? false;
   const device = playback?.device;
   const repeat = playback?.repeat_state ?? 'off';
+
+  const { openMenu } = useMediaActions();
+  const playingItem = playback?.item;
+  const currentItem =
+    isAd || !playingItem
+      ? null
+      : playingItem.type === 'track'
+        ? trackItem(playingItem)
+        : playingItem.type === 'episode'
+          ? episodeItem(playingItem)
+          : null;
+  const isSaved = useSaved(currentItem?.key ?? null);
 
   const title = isAd ? 'Werbung' : (info?.title ?? 'Unbekannter Titel');
   const subtitle = isAd ? 'Gleich geht’s weiter' : (info?.subtitle ?? '');
@@ -65,8 +80,28 @@ export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices,
 
       <section className="player-panel glass glass--text" aria-label="Steuerung">
         <div className="track-info">
-          <h1 className="track-info__title">{title}</h1>
-          <p className="track-info__subtitle">{subtitle}</p>
+          <div className="track-info__text">
+            <h1 className="track-info__title">{title}</h1>
+            <p className="track-info__subtitle">{subtitle}</p>
+          </div>
+          {currentItem && (
+            <div className="track-info__actions">
+              <GlassButton
+                variant="plain"
+                size="s"
+                active={isSaved === true}
+                className="heart-button"
+                aria-pressed={isSaved === true}
+                aria-label={isSaved ? 'Aus Lieblingssongs entfernen' : 'Zu Lieblingssongs hinzufügen'}
+                onClick={() => void setSaved(currentItem.key, !isSaved)}
+              >
+                <Icon name={isSaved ? 'heartFilled' : 'heart'} size={22} />
+              </GlassButton>
+              <GlassButton variant="plain" size="s" aria-label="Weitere Optionen" onClick={() => openMenu(currentItem)}>
+                <Icon name="more" size={22} />
+              </GlassButton>
+            </div>
+          )}
         </div>
 
         <ProgressBar snapshot={snapshot} disabled={blocked('seeking')} onSeek={player.seekTo} />

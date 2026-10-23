@@ -92,7 +92,11 @@ Der Code enthält dein Refresh-Token. Teile ihn mit niemandem.
 - **Detailseiten:** Playlists, Alben und Künstler öffnen sich mit ihrer Titelliste, statt sofort abzuspielen. Zum Abspielen den großen ▶︎-Knopf, Zufall oder einen einzelnen Titel antippen. Bei fremden Playlists liefert Spotify im Development Mode keine Titel. Abspielen geht trotzdem. Künstlerseiten zeigen Alben und Singles, weil „Top-Titel“ im Development Mode entfernt wurde.
 - **Darstellung (Zahnrad auf der Startseite):** Akzentfarbe (vom Cover oder fest), Hintergrund (Cover / Nur Farben / Schlicht), Glasstärke, Bewegung der Farbflecken und App-Icon. Die Einstellungen gelten pro Gerät. Ein neues App-Icon übernimmt iOS erst, wenn du die Seite neu zum Home-Bildschirm hinzufügst.
 
-Start und Bibliothek brauchen die Berechtigungen `playlist-read-private`, `playlist-read-collaborative`, `user-read-recently-played` und `user-top-read`. Sitzungen aus älteren Versionen sehen deshalb den Knopf „Neu mit Spotify verbinden“.
+- **„…“-Menü bei jedem Titel und jeder Folge:** liken, zur Warteschlange, zu einer Playlist hinzufügen, aus der eigenen Playlist entfernen, Album bzw. Künstler anzeigen, teilen.
+- **Playlists:** erstellen (Bibliothek → „+“ oder „Neue Playlist“ beim Hinzufügen), bearbeiten (Name, Beschreibung, öffentlich), löschen. Alben, fremde Playlists, Podcasts und Hörbücher lassen sich per Herz speichern bzw. folgen. Das Herz im großen Player liked den laufenden Titel.
+- **Nicht möglich** (keine Web-API): Songtexte, Jam, Downloads, DJ, Radio/Empfehlungen, Freundesaktivität, Schlaf-Timer, Künstlern folgen, Playlist-Cover hochladen.
+
+Start, Bibliothek und Bearbeiten brauchen zusätzliche Berechtigungen (siehe `PERSONAL_SCOPES` in `src/config.ts`). Sitzungen aus älteren Versionen sehen deshalb den Knopf „Neu mit Spotify verbinden“.
 
 
 - **Polling:** Alle 1,5 s, solange Musik läuft, und alle 4 s im Leerlauf. Dazwischen zählt der Fortschritt lokal per `requestAnimationFrame` hoch. Ist die App im Hintergrund, pausiert das Polling (`visibilitychange`). Alle Development-Mode-Apps eines Kontos teilen sich ein Kontingent, deshalb ist das Intervall bewusst nicht kürzer.

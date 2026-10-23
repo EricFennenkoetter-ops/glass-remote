@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   getMyPlaylists,
   getRecentlyPlayed,
@@ -53,8 +53,30 @@ const SHORTCUT_COUNT = 6;
 let cache: { data: PersonalData; loadedAt: number } | null = null;
 let inFlight: Promise<PersonalData> | null = null;
 
+// Bumped when the library changed (like, new playlist …) → mounted views reload.
+let version = 0;
+const versionListeners = new Set<() => void>();
+
+export function invalidatePersonalData(): void {
+  if (cache) cache.loadedAt = 0;
+  version += 1;
+  versionListeners.forEach((listener) => listener());
+}
+
+/** Changes whenever the library was edited; use as an effect dependency to reload. */
+export function useLibraryVersion(): number {
+  return useSyncExternalStore(
+    (listener) => {
+      versionListeners.add(listener);
+      return () => versionListeners.delete(listener);
+    },
+    () => version,
+  );
+}
+
 export function usePersonalData(): PersonalState {
   const allowed = hasScopes(PERSONAL_SCOPES);
+  const libraryVersion = useLibraryVersion();
   const [state, setState] = useState<PersonalState>(() => {
     if (!allowed) return { status: 'missing-scopes' };
     return cache ? { status: 'ready', data: cache.data } : { status: 'loading' };
@@ -79,7 +101,7 @@ export function usePersonalData(): PersonalState {
     return () => {
       cancelled = true;
     };
-  }, [allowed]);
+  }, [allowed, libraryVersion]);
 
   return state;
 }

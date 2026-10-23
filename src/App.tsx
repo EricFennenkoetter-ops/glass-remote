@@ -13,6 +13,7 @@ import { GlassButton } from './components/GlassButton';
 import { Toasts } from './components/Toasts';
 import { describeItem } from './lib/item';
 import type { MediaItem } from './lib/media';
+import { MediaActionsProvider } from './player/MediaActions';
 import { usePlayer } from './player/usePlayer';
 import { MiniPlayer } from './components/MiniPlayer';
 import { TabBar, type TabId } from './components/TabBar';
@@ -104,8 +105,15 @@ function Remote() {
   const openQueue = useCallback(() => setSheet('queue'), []);
   const closePlayer = useCallback(() => setPlayerOpen(false), []);
   const openAppearance = useCallback(() => setSheet('appearance'), []);
-  const openDetail = useCallback((item: MediaItem) => setPages((stack) => [...stack, item]), []);
+  const openDetail = useCallback((item: MediaItem) => {
+    setPages((stack) => [...stack, item]);
+    setPlayerOpen(false); // e.g. "Album anzeigen" from the full player
+  }, []);
   const goBack = useCallback(() => setPages((stack) => stack.slice(0, -1)), []);
+  const leaveDeletedPlaylist = useCallback(
+    (uri: string) => setPages((stack) => stack.filter((page) => page.contextUri !== uri)),
+    [],
+  );
   // Like Spotify: switching tabs – or tapping the current one – returns to the tab's root.
   const changeTab = useCallback((next: TabId) => {
     setTab(next);
@@ -140,7 +148,7 @@ function Remote() {
   }
 
   return (
-    <>
+    <MediaActionsProvider player={player} openDetail={openDetail} onPlaylistDeleted={leaveDeletedPlaylist}>
       <Background imageUrl={info?.imageSmall ?? null} paletteSourceUrl={info?.imageMedium ?? null} />
       <div className="tabs-dim" aria-hidden="true" />
       <main
@@ -199,6 +207,6 @@ function Remote() {
         onClose={closeSheet}
         onSelect={player.useDevice}
       />
-    </>
+    </MediaActionsProvider>
   );
 }

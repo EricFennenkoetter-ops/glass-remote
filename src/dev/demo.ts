@@ -63,7 +63,7 @@ export function installDemo(): void {
       refreshToken: 'demo',
       expiresAt: Date.now() + 365 * 24 * 3600_000,
       scope:
-        'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-read-recently-played user-top-read user-library-read user-read-playback-position',
+        'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-read-recently-played user-top-read user-library-read user-read-playback-position user-library-modify user-follow-read user-follow-modify playlist-modify-public playlist-modify-private',
     }),
   );
 
@@ -101,6 +101,10 @@ export function installDemo(): void {
   };
   const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
   const empty = () => new Response(null, { status: 204 });
+
+  const createdPlaylists: { uri: string; [key: string]: unknown }[] = [];
+  const deletedUris = new Set<string>();
+  const library = new Set<string>(['spotify:track:demo0', 'spotify:album:demo1', 'spotify:show:demo']);
 
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
@@ -194,6 +198,33 @@ export function installDemo(): void {
     if (method === 'GET' && path === '/me/shows') return json({ items: [{ added_at: '2026-10-01T10:00:00Z', show: demoShow }], total: 1, next: null });
     if (method === 'GET' && path === '/me/audiobooks') return json({ items: [demoAudiobook], total: 1, next: null });
 
+    if (method === 'GET' && path === '/me') return json({ id: 'eric', display_name: 'Eric', images: [] });
+    if (method === 'POST' && path === '/me/playlists') {
+      const body = JSON.parse(String(init?.body)) as { name: string; description: string; public: boolean };
+      const created = { type: 'playlist', uri: `spotify:playlist:mine${4 + createdPlaylists.length}`, name: body.name, description: body.description, public: body.public, images: [], owner: { id: 'eric', display_name: 'Eric' }, items: { total: 0 } };
+      createdPlaylists.unshift(created);
+      return new Response(JSON.stringify(created), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (path.match(/^\/playlists\/[^/]+\/items$/) && (method === 'POST' || method === 'DELETE')) {
+      return json({ snapshot_id: 'demo' });
+    }
+    if (method === 'PUT' && path.match(/^\/playlists\/[^/]+$/)) return empty();
+    if (path === '/me/library') {
+      const uris = (url.searchParams.get('uris') ?? '').split(',');
+      uris.forEach((uri) => {
+        if (method === 'PUT') {
+          library.add(uri);
+          deletedUris.delete(uri);
+        } else {
+          library.delete(uri);
+          if (uri.includes(':mine')) deletedUris.add(uri);
+        }
+      });
+      return empty();
+    }
+    if (method === 'GET' && path === '/me/library/contains') {
+      return json((url.searchParams.get('uris') ?? '').split(',').map((uri) => library.has(uri)));
+    }
     const playlistMatch = path.match(/^\/playlists\/([^/]+)(\/items)?$/);
     if (method === 'GET' && playlistMatch) {
       const [, id, items] = playlistMatch;
@@ -212,7 +243,8 @@ export function installDemo(): void {
         name: id?.startsWith('mine') ? ['Chill am Abend', 'Sommer 2026', 'Autofahrt', 'Fokus'][index] : 'Fremde Playlist',
         description: null,
         images: tracks[index % tracks.length]!.album.images,
-        owner: { display_name: id?.startsWith('mine') ? 'Eric' : 'Spotify' },
+        owner: id?.startsWith('mine') ? { id: 'eric', display_name: 'Eric' } : { id: 'spotify', display_name: 'Spotify' },
+        public: false,
       });
     }
     const albumMatch = path.match(/^\/albums\/demo(\d+)$/);
@@ -259,8 +291,9 @@ export function installDemo(): void {
       return json({ items: [...tracks].reverse(), total: tracks.length, next: null });
     }
     if (method === 'GET' && path === '/me/playlists') {
-      const items = tracks.map((t, i) => ({ type: 'playlist', uri: `spotify:playlist:mine${i}`, name: ['Chill am Abend', 'Sommer 2026', 'Autofahrt', 'Fokus'][i], images: t.album.images, owner: { display_name: 'Eric' }, items: { total: 20 + i * 7 } }));
-      return json({ items, total: items.length, next: null });
+      const items = tracks.map((t, i) => ({ type: 'playlist', uri: `spotify:playlist:mine${i}`, name: ['Chill am Abend', 'Sommer 2026', 'Autofahrt', 'Fokus'][i], images: t.album.images, owner: { id: 'eric', display_name: 'Eric' }, items: { total: 20 + i * 7 } }));
+      const all = [...createdPlaylists, ...items].filter((playlist) => !deletedUris.has(playlist.uri));
+      return json({ items: all, total: all.length, next: null });
     }
     if (path === '/me/player/pause') {
       freeze();

@@ -17,6 +17,11 @@ export const SCOPES = [
   'user-top-read',
   'user-library-read',
   'user-read-playback-position',
+  'user-library-modify',
+  'user-follow-read',
+  'user-follow-modify',
+  'playlist-modify-public',
+  'playlist-modify-private',
 ] as const;
 
 /** Needed for the personal home/library; sessions from older app versions don't have them yet. */
@@ -27,6 +32,11 @@ export const PERSONAL_SCOPES = [
   'user-top-read',
   'user-library-read',
   'user-read-playback-position',
+  'user-library-modify',
+  'user-follow-read',
+  'user-follow-modify',
+  'playlist-modify-public',
+  'playlist-modify-private',
 ] as const;
 
 export const ACCOUNTS_BASE = 'https://accounts.spotify.com';

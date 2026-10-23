@@ -60,7 +60,6 @@ export function SearchTab({ player, snapshot, onOpenDetail }: SearchTabProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const trimmed = query.trim();
   const playingContextUri = snapshot.playback?.context?.uri ?? null;
-  const onQueue = (uri: string) => void player.addToQueue(uri);
 
   useEffect(() => {
     lastQuery = query;
@@ -170,7 +169,6 @@ export function SearchTab({ player, snapshot, onOpenDetail }: SearchTabProps) {
             startingKey={startingKey}
             playingItemUri={playingItemUri}
             onStart={activate}
-            onQueue={onQueue}
           />
         </TabSection>
       )}
@@ -187,7 +185,6 @@ export function SearchTab({ player, snapshot, onOpenDetail }: SearchTabProps) {
               playingContextUri={playingContextUri}
               playingItemUri={playingItemUri}
               onStart={activate}
-              onQueue={onQueue}
             />
           </TabSection>
         ))}

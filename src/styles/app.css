@@ -219,8 +219,26 @@
 }
 
 .track-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
   min-width: 0;
   text-shadow: var(--text-shadow-on-glass);
+}
+
+.track-info__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-info__actions {
+  flex: none;
+  display: flex;
+  margin-right: -10px;
+}
+
+.track-info__actions .glass-button.is-active::after {
+  display: none;
 }
 
 .track-info__title {
@@ -1084,6 +1102,95 @@
   color: var(--color-accent);
 }
 
+/* … menu */
+.menu-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  padding: 0 var(--space-s) var(--space-s);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-list {
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-s);
+  border-radius: var(--radius-m);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  transition: background-color var(--motion-duration-fast) ease;
+}
+
+.menu-row svg {
+  flex: none;
+  color: var(--color-label-secondary);
+}
+
+.menu-row:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.menu-row--danger,
+.menu-row--danger svg {
+  color: var(--color-danger);
+}
+
+.list-row__art--new {
+  background: var(--glass-fill-prominent);
+  color: var(--color-label-primary);
+}
+
+/* Playlist editor */
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  padding: 0 var(--space-xs) var(--space-s);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-label-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 12px var(--space-s);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-s);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--color-label-primary);
+  font: 17px var(--font-family); /* ≥16px: no iOS zoom on focus */
+  resize: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.editor-form .toggle-row {
+  padding: 0;
+}
+
 .shortcut__spinner {
   flex: none;
   margin-right: 10px;
@@ -1516,7 +1623,14 @@
 }
 
 .detail__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--space-xs);
+}
+
+.heart-button.is-active {
+  color: var(--color-accent);
 }
 
 .detail__hero {

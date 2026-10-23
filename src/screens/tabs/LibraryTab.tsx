@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { GlassButton } from '../../components/GlassButton';
+import { Icon } from '../../components/Icon';
 import { MediaList } from '../../components/MediaList';
+import { useMediaActions } from '../../player/MediaActions';
 import type { MediaItem } from '../../lib/media';
 import type { PlayerEngine, PlayerSnapshot } from '../../player/engine';
 import { usePersonalData, type PersonalData } from '../../player/usePersonalData';
@@ -32,11 +35,15 @@ export function LibraryTab({ player, snapshot, onOpenDetail }: LibraryTabProps) 
   const personal = usePersonalData();
   const { startingKey, activate } = useStartItem(player, onOpenDetail);
   const [filter, setFilter] = useState<Filter>('playlists');
+  const { createPlaylist } = useMediaActions();
 
   return (
     <>
       <header className="tab-header">
         <h1 className="tab-header__title">Bibliothek</h1>
+        <GlassButton variant="floating" size="s" aria-label="Neue Playlist" onClick={() => createPlaylist()}>
+          <Icon name="plus" size={22} />
+        </GlassButton>
       </header>
 
       <div className="chips chips--scroll" role="tablist" aria-label="Filter">
@@ -67,7 +74,6 @@ export function LibraryTab({ player, snapshot, onOpenDetail }: LibraryTabProps) 
           playingContextUri={snapshot.playback?.context?.uri ?? null}
           playingItemUri={snapshot.playback?.item?.uri ?? null}
           onStart={activate}
-          onQueue={(uri) => void player.addToQueue(uri)}
         />
       )}
     </>
