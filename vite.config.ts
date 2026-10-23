@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 /** Files from /public that belong to the app shell. */
 const PUBLIC_SHELL_FILES = [
   'manifest.webmanifest',
+  'apple-touch-icon.png',
   'icons/icon-180.png',
   'icons/icon-192.png',
   'icons/icon-512.png',

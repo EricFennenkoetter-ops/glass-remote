@@ -23,17 +23,52 @@ export type Track = {
   album: AlbumSummary;
 };
 
+export type ResumePoint = { fully_played: boolean; resume_position_ms: number };
+
+/** Podcast episode. `show` is missing on simplified episodes (search results, show pages). */
 export type Episode = {
   type: 'episode';
   id: string;
   uri: string;
   name: string;
   duration_ms: number;
+  release_date?: string;
   images: SpotifyImage[];
-  show: { name: string; publisher: string; images: SpotifyImage[] };
+  resume_point?: ResumePoint;
+  show?: { name: string; publisher: string; images: SpotifyImage[] };
 };
 
-export type PlayableItem = Track | Episode;
+/** Audiobook chapter. The player reports it while an audiobook plays. */
+export type Chapter = {
+  type: 'chapter';
+  uri: string;
+  name: string;
+  duration_ms: number;
+  chapter_number?: number;
+  images?: SpotifyImage[];
+  resume_point?: ResumePoint;
+  audiobook?: { name: string; images: SpotifyImage[] };
+};
+
+export type PlayableItem = Track | Episode | Chapter;
+
+export type Show = {
+  type: 'show';
+  uri: string;
+  name: string;
+  publisher: string;
+  images: SpotifyImage[];
+  total_episodes?: number;
+};
+
+export type Audiobook = {
+  type: 'audiobook';
+  uri: string;
+  name: string;
+  authors: { name: string }[];
+  images: SpotifyImage[];
+  total_chapters?: number;
+};
 
 export type DeviceType =
   | 'Computer'
@@ -133,6 +168,9 @@ export type SearchResponse = {
   artists?: Paging<Artist>;
   albums?: Paging<SimplifiedAlbum>;
   playlists?: Paging<SimplifiedPlaylist>;
+  shows?: Paging<Show>;
+  episodes?: Paging<Episode>;
+  audiobooks?: Paging<Audiobook>;
 };
 
 export type RecentlyPlayedResponse = {
@@ -148,3 +186,7 @@ export type FullAlbum = SimplifiedAlbum & { tracks: Paging<SimplifiedTrack> };
 export type PlaylistEntry = { item?: PlayableItem | null; track?: PlayableItem | null };
 
 export type FullPlaylist = SimplifiedPlaylist & { description: string | null };
+
+export type SavedTrack = { added_at: string; track: Track };
+export type SavedAlbum = { added_at: string; album: SimplifiedAlbum };
+export type SavedShow = { added_at: string; show: Show };

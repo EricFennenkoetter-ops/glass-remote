@@ -83,7 +83,9 @@ export function applyAppearance(value: Appearance = appearance): void {
   if (accent) root.style.setProperty('--accent-override', accent);
   else root.style.removeProperty('--accent-override');
   // iOS reads the touch icon when the page is added to the home screen.
-  document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')?.setAttribute('href', `./icons/${value.icon}-180.png`);
+  // The default keeps its own file name so it isn't served from a stale iOS icon cache.
+  const href = value.icon === DEFAULT_APPEARANCE.icon ? './apple-touch-icon.png' : `./icons/${value.icon}-180.png`;
+  document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')?.setAttribute('href', href);
 }
 
 export function updateAppearance(patch: Partial<Appearance>): void {

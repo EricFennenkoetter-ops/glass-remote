@@ -20,7 +20,7 @@ export function MediaCarousel({ items, startingKey, playingContextUri, onStart }
             onClick={() => onStart(item)}
             disabled={startingKey !== null}
           >
-            <div className="media-card__art">
+            <div className={`media-card__art${item.artStyle ? ` art--${item.artStyle}` : ''}`}>
               {item.imageLarge ? (
                 <img src={item.imageLarge} alt="" loading="lazy" draggable={false} />
               ) : (
@@ -49,7 +49,7 @@ export function ShortcutGrid({ items, startingKey, playingContextUri, onStart }:
             onClick={() => onStart(item)}
             disabled={startingKey !== null}
           >
-            <div className="shortcut__art">
+            <div className={`shortcut__art${item.artStyle ? ` art--${item.artStyle}` : ''}`}>
               {item.image ? <img src={item.image} alt="" draggable={false} /> : <Icon name={item.placeholderIcon} size={22} />}
             </div>
             <span className="shortcut__title">{item.title}</span>

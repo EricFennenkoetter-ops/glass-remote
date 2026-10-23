@@ -1,4 +1,4 @@
-import type { MediaItem } from '../lib/media';
+import { isPlayable, type MediaItem } from '../lib/media';
 import { Icon } from './Icon';
 
 type MediaListProps = {
@@ -20,7 +20,7 @@ export function MediaList({ items, startingKey, playingContextUri, playingItemUr
           // A playlist can contain the same track twice.
           key={`${item.key}-${index}`}
           className={`list-row list-row--split${
-            (item.kind === 'track' ? item.key === playingItemUri : item.contextUri === playingContextUri) ? ' is-current' : ''
+            (isPlayable(item) ? item.key === playingItemUri : item.contextUri === playingContextUri) ? ' is-current' : ''
           }`}
         >
           <button
@@ -28,12 +28,14 @@ export function MediaList({ items, startingKey, playingContextUri, playingItemUr
             className="list-row__main"
             onClick={() => onStart(item)}
             disabled={startingKey !== null}
-            aria-label={item.kind === 'track' ? `${item.title} abspielen` : `${item.title} öffnen`}
+            aria-label={isPlayable(item) ? `${item.title} abspielen` : `${item.title} öffnen`}
           >
             {item.leading !== undefined ? (
               <span className="list-row__number">{item.leading}</span>
             ) : (
-              <div className={`list-row__art${item.round ? ' list-row__art--round' : ''}`}>
+              <div
+                className={`list-row__art${item.round ? ' list-row__art--round' : ''}${item.artStyle ? ` art--${item.artStyle}` : ''}`}
+              >
                 {item.image ? <img src={item.image} alt="" loading="lazy" /> : <Icon name={item.placeholderIcon} size={20} />}
               </div>
             )}
@@ -43,7 +45,7 @@ export function MediaList({ items, startingKey, playingContextUri, playingItemUr
             </div>
             {startingKey === item.key ? (
               <span className="spinner" aria-hidden="true" />
-            ) : item.kind === 'track' ? (
+            ) : isPlayable(item) ? (
               item.meta && <span className="list-row__meta">{item.meta}</span>
             ) : (
               <Icon name="chevronRight" size={18} className="list-row__chevron" />

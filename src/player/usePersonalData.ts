@@ -1,18 +1,43 @@
 import { useEffect, useState } from 'react';
-import { getMyPlaylists, getRecentlyPlayed, getTopArtists, getTopTracks } from '../api/player';
+import {
+  getMyPlaylists,
+  getRecentlyPlayed,
+  getSavedAlbums,
+  getSavedAudiobooks,
+  getSavedShows,
+  getSavedTracks,
+  getTopArtists,
+  getTopTracks,
+} from '../api/player';
 import type { SimplifiedPlaylist, Track } from '../api/types';
 import { hasScopes } from '../auth/session';
 import { PERSONAL_SCOPES } from '../config';
-import { albumItem, artistItem, errorMessage, isPresent, playlistItem, trackItem, type MediaItem } from '../lib/media';
+import {
+  albumItem,
+  artistItem,
+  audiobookItem,
+  errorMessage,
+  isPresent,
+  likedSongsItem,
+  playlistItem,
+  showItem,
+  trackItem,
+  type MediaItem,
+} from '../lib/media';
 
 export type PersonalData = {
-  /** Up to 6 recently used albums/playlists for the shortcut grid. */
+  /** Up to 6 recently used albums/playlists for the shortcut grid (Lieblingssongs first). */
   shortcuts: MediaItem[];
   recentContexts: MediaItem[];
   recentTracks: MediaItem[];
   topArtists: MediaItem[];
   topTracks: MediaItem[];
+  /** Lieblingssongs + own/followed playlists. */
   playlists: MediaItem[];
+  likedTracks: Track[];
+  albums: MediaItem[];
+  shows: MediaItem[];
+  audiobooks: MediaItem[];
 };
 
 export type PersonalState =
@@ -59,6 +84,11 @@ export function usePersonalData(): PersonalState {
   return state;
 }
 
+/** Saved tracks of the cache, for the Lieblingssongs page (avoids loading them twice). */
+export function cachedLikedTracks(): Track[] | null {
+  return cache?.data.likedTracks ?? null;
+}
+
 async function loadPersonalData(): Promise<PersonalData> {
   const [playlistsRaw, recent, artists, tracks] = await Promise.all([
     getMyPlaylists(),
@@ -66,22 +96,43 @@ async function loadPersonalData(): Promise<PersonalData> {
     getTopArtists(),
     getTopTracks(),
   ]);
+  // Library parts are optional: e.g. audiobooks aren't available in every country.
+  const [liked, albums, shows, audiobooks] = await Promise.all([
+    optional(getSavedTracks()),
+    optional(getSavedAlbums()),
+    optional(getSavedShows()),
+    optional(getSavedAudiobooks()),
+  ]);
+
   const playlists = playlistsRaw.filter(isPresent);
   const playlistByUri = new Map(playlists.map((playlist) => [playlist.uri, playlist]));
+  const likedItem = liked.length > 0 ? [likedSongsItem(liked.length)] : [];
 
   const recentContexts = dedupe(
     recent.map(({ track, context }) => contextItem(track, context?.uri ?? null, playlistByUri)).filter(isPresent),
   );
-  const shortcuts = dedupe([...recentContexts, ...playlists.map(playlistItem)]).slice(0, SHORTCUT_COUNT);
 
   return {
-    shortcuts,
+    shortcuts: dedupe([...likedItem, ...recentContexts, ...playlists.map(playlistItem)]).slice(0, SHORTCUT_COUNT),
     recentContexts: recentContexts.slice(0, 12),
     recentTracks: dedupe(recent.map(({ track }) => trackItem(track))).slice(0, 15),
     topArtists: artists.filter(isPresent).map(artistItem),
     topTracks: tracks.filter(isPresent).map(trackItem),
-    playlists: playlists.map(playlistItem),
+    playlists: [...likedItem, ...playlists.map(playlistItem)],
+    likedTracks: liked.filter(isPresent),
+    albums: albums.filter(isPresent).map(albumItem),
+    shows: shows.filter(isPresent).map(showItem),
+    audiobooks: audiobooks.filter(isPresent).map(audiobookItem),
   };
+}
+
+async function optional<T>(request: Promise<T[]>): Promise<T[]> {
+  try {
+    return await request;
+  } catch (error) {
+    console.warn('Optional library data unavailable:', error);
+    return [];
+  }
 }
 
 /** What a recently played track was played from: one of the user's playlists, else its album. */

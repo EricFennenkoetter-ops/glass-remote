@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import type { MediaItem } from '../lib/media';
+import { isPlayable, type MediaItem } from '../lib/media';
 import type { PlayerEngine } from './engine';
 
 /**
- * Tap handling for media items: tracks start playing, albums/playlists/artists open their page.
+ * Tap handling for media items: tracks/episodes/chapters start playing, collections open their page.
  * Also tracks which item is loading.
  */
 export function useStartItem(player: PlayerEngine, onOpenDetail?: (item: MediaItem) => void) {
@@ -16,7 +16,7 @@ export function useStartItem(player: PlayerEngine, onOpenDetail?: (item: MediaIt
   };
 
   const activate = (item: MediaItem) => {
-    if (item.kind !== 'track' && onOpenDetail) onOpenDetail(item);
+    if (!isPlayable(item) && onOpenDetail) onOpenDetail(item);
     else void start(item);
   };
 

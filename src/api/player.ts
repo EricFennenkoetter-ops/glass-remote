@@ -14,6 +14,13 @@ import type {
   PlaylistEntry,
   SimplifiedAlbum,
   Track,
+  Audiobook,
+  Chapter,
+  Episode,
+  SavedAlbum,
+  SavedShow,
+  SavedTrack,
+  Show,
 } from './types';
 
 // https://developer.spotify.com/documentation/web-api/reference/#category-player
@@ -51,16 +58,17 @@ export const transferPlayback = (deviceId: string, startPlaying: boolean) =>
   spotify('/me/player', { method: 'PUT', body: { device_ids: [deviceId], play: startPlaying } });
 
 /** Either a context (album, artist, playlist) optionally starting at a track, or a plain list of tracks. */
-export type PlayRequest = { contextUri: string; offsetUri?: string } | { uris: string[] };
+export type PlayRequest = { contextUri: string; offsetUri?: string } | { uris: string[]; offsetUri?: string };
 
 export const startPlayback = (request: PlayRequest, deviceId?: string) =>
   spotify('/me/player/play', {
     method: 'PUT',
     query: { device_id: deviceId },
     body:
-      'uris' in request
-        ? { uris: request.uris }
-        : { context_uri: request.contextUri, ...(request.offsetUri ? { offset: { uri: request.offsetUri } } : {}) },
+      {
+        ...('uris' in request ? { uris: request.uris } : { context_uri: request.contextUri }),
+        ...(request.offsetUri ? { offset: { uri: request.offsetUri } } : {}),
+      },
   });
 
 export const addToQueue = (uri: string) => spotify('/me/player/queue', { method: 'POST', query: { uri } });
@@ -68,7 +76,7 @@ export const addToQueue = (uri: string) => spotify('/me/player/queue', { method:
 // https://developer.spotify.com/documentation/web-api/reference/search
 // Development Mode allows at most 10 results per type.
 export const search = (query: string) =>
-  spotify<SearchResponse>('/search', { query: { q: query, type: 'track,artist,album,playlist', limit: 10 } });
+  spotify<SearchResponse>('/search', { query: { q: query, type: 'track,artist,album,playlist,show,episode,audiobook', limit: 10 } });
 
 export const getMyPlaylists = async () =>
   (await spotify<Paging<SimplifiedPlaylist>>('/me/playlists', { query: { limit: 50 } }))?.items ?? [];
@@ -101,16 +109,16 @@ async function collectPages<T>(first: Paging<T> | null): Promise<T[]> {
 export const getPlaylist = (id: string) =>
   spotify<FullPlaylist>(`/playlists/${encodeURIComponent(id)}`);
 
-/** Only works for playlists the user owns or collaborates on (403 otherwise). */
-export const getPlaylistTracks = async (id: string): Promise<Track[]> => {
+/** Tracks and podcast episodes. Only works for playlists the user owns or collaborates on (403 otherwise). */
+export const getPlaylistTracks = async (id: string): Promise<(Track | Episode)[]> => {
   const entries = await collectPages(
     await spotify<Paging<PlaylistEntry>>(`/playlists/${encodeURIComponent(id)}/items`, {
-      query: { limit: 50, additional_types: 'track' },
+      query: { limit: 50, additional_types: 'track,episode' },
     }),
   );
   return entries
     .map((entry) => entry.item ?? entry.track ?? null)
-    .filter((item): item is Track => item?.type === 'track');
+    .filter((item): item is Track | Episode => item?.type === 'track' || item?.type === 'episode');
 };
 
 export const getAlbum = async (id: string) => {
@@ -127,3 +135,30 @@ export const getArtistAlbums = async (id: string) =>
       query: { include_groups: 'album,single', limit: 10 },
     })
   )?.items.filter((album): album is SimplifiedAlbum => album !== null) ?? [];
+
+// ---------- library (scope user-library-read) & podcasts / audiobooks ----------
+
+const libraryPage = { limit: 50 };
+
+export const getSavedTracks = async () =>
+  (await collectPages(await spotify<Paging<SavedTrack>>('/me/tracks', { query: libraryPage }))).map((saved) => saved.track);
+
+export const getSavedAlbums = async () =>
+  (await collectPages(await spotify<Paging<SavedAlbum>>('/me/albums', { query: libraryPage }))).map((saved) => saved.album);
+
+export const getSavedShows = async () =>
+  (await collectPages(await spotify<Paging<SavedShow>>('/me/shows', { query: libraryPage }))).map((saved) => saved.show);
+
+export const getSavedAudiobooks = async () =>
+  collectPages(await spotify<Paging<Audiobook>>('/me/audiobooks', { query: libraryPage }));
+
+export const getShow = (id: string) => spotify<Show>(`/shows/${encodeURIComponent(id)}`);
+
+/** Newest first; `resume_point` needs the user-read-playback-position scope. */
+export const getShowEpisodes = async (id: string) =>
+  collectPages(await spotify<Paging<Episode>>(`/shows/${encodeURIComponent(id)}/episodes`, { query: { limit: 50 } }));
+
+export const getAudiobook = (id: string) => spotify<Audiobook>(`/audiobooks/${encodeURIComponent(id)}`);
+
+export const getAudiobookChapters = async (id: string) =>
+  collectPages(await spotify<Paging<Chapter>>(`/audiobooks/${encodeURIComponent(id)}/chapters`, { query: { limit: 50 } }));

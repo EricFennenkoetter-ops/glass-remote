@@ -74,7 +74,10 @@ export function HomeTab({ player, snapshot, onOpenDevices, onOpenAppearance, onO
           {carousel('Zuletzt gehört', personal.data.recentContexts)}
           {carousel('Deine Top-Künstler', personal.data.topArtists)}
           {carousel('Gerade oft gehört', personal.data.topTracks)}
+          {carousel('Deine Podcasts', personal.data.shows)}
           {carousel('Deine Playlists', personal.data.playlists)}
+          {carousel('Gespeicherte Alben', personal.data.albums)}
+          {carousel('Deine Hörbücher', personal.data.audiobooks)}
         </>
       )}
     </>

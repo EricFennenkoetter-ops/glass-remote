@@ -21,14 +21,35 @@ export function pickImage(images: SpotifyImage[], minWidth: number): string | nu
 }
 
 export function describeItem(item: PlayableItem): ItemInfo {
-  const images = item.type === 'track' ? item.album.images : item.images.length ? item.images : item.show.images;
   return {
     key: item.uri,
     title: item.name,
-    subtitle: item.type === 'track' ? item.artists.map((artist) => artist.name).join(', ') : item.show.name,
+    subtitle: subtitleOf(item),
     durationMs: item.duration_ms,
-    imageLarge: pickImage(images, 600),
-    imageMedium: pickImage(images, 280),
-    imageSmall: pickImage(images, 60),
+    imageLarge: pickImage(imagesOf(item), 600),
+    imageMedium: pickImage(imagesOf(item), 280),
+    imageSmall: pickImage(imagesOf(item), 60),
   };
+}
+
+function imagesOf(item: PlayableItem): SpotifyImage[] {
+  switch (item.type) {
+    case 'track':
+      return item.album.images;
+    case 'episode':
+      return item.images.length ? item.images : (item.show?.images ?? []);
+    case 'chapter':
+      return item.images?.length ? item.images : (item.audiobook?.images ?? []);
+  }
+}
+
+function subtitleOf(item: PlayableItem): string {
+  switch (item.type) {
+    case 'track':
+      return item.artists.map((artist) => artist.name).join(', ');
+    case 'episode':
+      return item.show?.name ?? 'Podcast';
+    case 'chapter':
+      return item.audiobook?.name ?? 'Hörbuch';
+  }
 }

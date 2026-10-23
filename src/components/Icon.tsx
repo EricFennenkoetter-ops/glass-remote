@@ -67,6 +67,30 @@ const PATHS = {
       d="M5 4v16M10 4v16m4.5-15.5 4.5 15"
     />
   ),
+  heart: (
+    <path d="M12 20.2s-7.5-4.6-7.5-10.1A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.7c0 5.5-7.5 10.1-7.5 10.1Z" />
+  ),
+  podcast: (
+    <>
+      <circle cx="12" cy="10" r="2.6" />
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        d="M7.6 14.4a6.2 6.2 0 1 1 8.8 0M5.1 17a9.6 9.6 0 1 1 13.8 0M12 13.5V21"
+      />
+    </>
+  ),
+  book: (
+    <path
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+      d="M12 6.5C10.3 5 7.8 4.5 4 4.5v13c3.8 0 6.3.5 8 2 1.7-1.5 4.2-2 8-2v-13c-3.8 0-6.3.5-8 2Zm0 0v13"
+    />
+  ),
   chevronRight: (
     <path d="m9.5 6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
   ),

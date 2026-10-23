@@ -63,7 +63,7 @@ export function installDemo(): void {
       refreshToken: 'demo',
       expiresAt: Date.now() + 365 * 24 * 3600_000,
       scope:
-        'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-read-recently-played user-top-read',
+        'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-read-recently-played user-top-read user-library-read user-read-playback-position',
     }),
   );
 
@@ -110,6 +110,19 @@ export function installDemo(): void {
     const method = init?.method ?? 'GET';
     const path = url.pathname.replace('/v1', '');
     const device = devices.find((d) => d.id === state.deviceId)!;
+    const demoImages = tracks[2]!.album.images;
+    const demoShow = { type: 'show', uri: 'spotify:show:demo', name: 'Hafenfunk – der Musikpodcast', publisher: 'Okapi Media', images: demoImages, total_episodes: 3 };
+    const demoEpisodes = [0, 1, 2].map((i) => ({
+      type: 'episode',
+      id: `ep${i}`,
+      uri: `spotify:episode:demo${i}`,
+      name: ['Folge 42: Liquid Glass im Ohr', 'Folge 41: Night Ferry live', 'Folge 40: Die besten Alben 2026'][i],
+      duration_ms: [2_820_000, 3_300_000, 4_100_000][i],
+      release_date: ['2026-10-20', '2026-10-13', '2026-10-06'][i],
+      images: demoImages,
+      resume_point: { fully_played: i === 2, resume_position_ms: i === 1 ? 1_200_000 : 0 },
+    }));
+    const demoAudiobook = { type: 'audiobook', uri: 'spotify:audiobook:demo', name: 'Die Stille unter Glas', authors: [{ name: 'Mira Kova' }], images: tracks[3]!.album.images, total_chapters: 5 };
 
     if (method === 'GET' && path === '/me/player') {
       const playback: PlaybackState = {
@@ -159,9 +172,28 @@ export function installDemo(): void {
         tracks: paging(hits),
         artists: paging(hits.map((t, i) => ({ type: 'artist', uri: `spotify:artist:demo${i}`, name: t.artists[0]?.name, images: t.album.images }))),
         albums: paging(hits.map((t) => ({ type: 'album', uri: t.album.uri, name: t.album.name, album_type: 'album', release_date: '2025-03-14', artists: t.artists, images: t.album.images }))),
+        shows: paging(hits.length ? [demoShow] : []),
+        episodes: paging(hits.length ? demoEpisodes.slice(0, 2) : []),
+        audiobooks: paging(hits.length ? [demoAudiobook] : []),
         playlists: paging(hits.length ? [null, { type: 'playlist', uri: 'spotify:playlist:demo', name: `Das ist ${hits[0]?.artists[0]?.name}`, images: hits[0]?.album.images, owner: { display_name: 'Spotify' }, items: { total: 50 } }] : []),
       });
     }
+    if (method === 'GET' && path === '/shows/demo') return json(demoShow);
+    if (method === 'GET' && path === '/shows/demo/episodes') return json({ items: demoEpisodes, total: 3, next: null });
+    if (method === 'GET' && path === '/audiobooks/demo') return json(demoAudiobook);
+    if (method === 'GET' && path === '/audiobooks/demo/chapters') {
+      const chapters = Array.from({ length: 5 }, (_, i) => ({ type: 'chapter', uri: `spotify:chapter:demo${i}`, name: `Kapitel ${i + 1}`, chapter_number: i + 1, duration_ms: 1_500_000 + i * 60_000 }));
+      return json({ items: chapters, total: 5, next: null });
+    }
+    if (method === 'GET' && path === '/me/tracks') {
+      return json({ items: [...tracks, ...tracks].map((track) => ({ added_at: '2026-10-01T10:00:00Z', track })), total: 8, next: null });
+    }
+    if (method === 'GET' && path === '/me/albums') {
+      return json({ items: tracks.slice(0, 3).map((t) => ({ added_at: '2026-10-01T10:00:00Z', album: { type: 'album', uri: t.album.uri, name: t.album.name, album_type: 'album', release_date: '2025-03-14', artists: t.artists, images: t.album.images } })), total: 3, next: null });
+    }
+    if (method === 'GET' && path === '/me/shows') return json({ items: [{ added_at: '2026-10-01T10:00:00Z', show: demoShow }], total: 1, next: null });
+    if (method === 'GET' && path === '/me/audiobooks') return json({ items: [demoAudiobook], total: 1, next: null });
+
     const playlistMatch = path.match(/^\/playlists\/([^/]+)(\/items)?$/);
     if (method === 'GET' && playlistMatch) {
       const [, id, items] = playlistMatch;

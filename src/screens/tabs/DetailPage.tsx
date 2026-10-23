@@ -1,12 +1,34 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { getAlbum, getArtist, getArtistAlbums, getPlaylist, getPlaylistTracks } from '../../api/player';
+import {
+  getAlbum,
+  getArtist,
+  getArtistAlbums,
+  getAudiobook,
+  getAudiobookChapters,
+  getPlaylist,
+  getPlaylistTracks,
+  getSavedTracks,
+  getShow,
+  getShowEpisodes,
+  type PlayRequest,
+} from '../../api/player';
 import { GlassButton } from '../../components/GlassButton';
 import { Icon } from '../../components/Icon';
 import { MediaCarousel } from '../../components/MediaCards';
 import { MediaList } from '../../components/MediaList';
 import { pickImage } from '../../lib/item';
-import { albumItem, contextTrackItem, errorMessage, idFromUri, type MediaItem } from '../../lib/media';
+import {
+  albumItem,
+  chapterItem,
+  contextTrackItem,
+  episodeItem,
+  errorMessage,
+  idFromUri,
+  LIKED_SONGS_URI,
+  type MediaItem,
+} from '../../lib/media';
+import { cachedLikedTracks } from '../../player/usePersonalData';
 import type { PlayerEngine, PlayerSnapshot } from '../../player/engine';
 import { useStartItem } from '../../player/useStartItem';
 import { TabSection } from './TabParts';
@@ -20,11 +42,19 @@ type DetailPageProps = {
   onOpenDetail: (item: MediaItem) => void;
 };
 
+/** Spotify accepts a limited number of uris per play request. */
+const MAX_URIS_PER_PLAY = 100;
+
 type DetailContent = {
   image: string | null;
   title: string;
   subtitle: string;
+  /** Heading above the list: "12 Titel", "Folgen", "Kapitel". */
+  listTitle: string;
+  /** Tracks, episodes or chapters. */
   tracks: MediaItem[];
+  /** Overrides item.play for ▶︎ (Lieblingssongs have no context uri). */
+  playAll?: PlayRequest;
   /** Artist pages: albums & singles. */
   albums: MediaItem[];
   /** Why the track list is empty although the item has tracks (e.g. playlists of other users). */
@@ -52,15 +82,18 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
   const content = state.status === 'ready' ? state.content : null;
   const image = content?.image ?? item.imageLarge;
 
+  const playable = content?.playAll ? { ...item, play: content.playAll } : item;
+  const canPlayAll = item.kind !== 'liked' || (content?.tracks.length ?? 0) > 0;
+
   const playAll = () => {
     if (isThisPlaying) player.togglePlay();
-    else void start(item);
+    else void start(playable);
   };
 
   // Start first (there may be no active device yet), then switch shuffle on for the rest.
   const shufflePlay = async () => {
     const wasShuffling = playback?.shuffle_state ?? false;
-    await start(item);
+    await start(playable);
     if (!wasShuffling) player.toggleShuffle();
   };
 
@@ -73,7 +106,9 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
       </header>
 
       <div className="detail__hero">
-        <div className={`detail__art${item.kind === 'artist' ? ' detail__art--round' : ''}`}>
+        <div
+          className={`detail__art${item.kind === 'artist' ? ' detail__art--round' : ''}${item.artStyle ? ` art--${item.artStyle}` : ''}`}
+        >
           {image ? <img src={image} alt="" /> : <Icon name={item.placeholderIcon} size={56} />}
         </div>
         <h1 className="detail__title">{content?.title ?? item.title}</h1>
@@ -81,23 +116,25 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
       </div>
 
       <div className="detail__actions">
+{item.kind !== 'show' && item.kind !== 'audiobook' && (
         <GlassButton
           variant="plain"
           size="m"
           active={playback?.shuffle_state}
           aria-label="Zufällig abspielen"
           onClick={() => void shufflePlay()}
-          disabled={startingKey !== null}
+          disabled={startingKey !== null || !canPlayAll}
         >
           <Icon name="shuffle" size={22} />
         </GlassButton>
+        )}
         <GlassButton
           variant="primary"
           size="l"
           className="detail__play"
           aria-label={isThisPlaying ? 'Pause' : 'Abspielen'}
           onClick={playAll}
-          disabled={startingKey !== null}
+          disabled={startingKey !== null || !canPlayAll}
         >
           {startingKey === item.key ? (
             <span className="spinner" />
@@ -114,7 +151,7 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
       {state.status === 'error' && <p className="sheet__message sheet__message--error">{state.message}</p>}
       {content?.tracksUnavailable && <p className="sheet__message">{content.tracksUnavailable}</p>}
       {content && content.tracks.length > 0 && (
-        <TabSection title={item.kind === 'artist' ? 'Beliebt' : `${content.tracks.length} Titel`}>
+        <TabSection title={content.listTitle}>
           <MediaList
             items={content.tracks}
             startingKey={startingKey}
@@ -141,50 +178,103 @@ export function DetailPage({ item, player, snapshot, onBack, onOpenDetail }: Det
 async function loadDetail(item: MediaItem): Promise<DetailContent> {
   const id = idFromUri(item.contextUri);
 
-  if (item.kind === 'album') {
-    const result = await getAlbum(id);
-    if (!result) throw new Error('Album nicht gefunden.');
-    const { album, tracks } = result;
-    return {
-      image: pickImage(album.images, 280),
-      title: album.name,
-      subtitle: [album.artists.map((artist) => artist.name).join(', '), album.release_date.slice(0, 4)]
-        .filter(Boolean)
-        .join(' · '),
-      tracks: tracks.map((track) => contextTrackItem(track, album.uri, String(track.track_number))),
-      albums: [],
-    };
-  }
-
-  if (item.kind === 'playlist') {
-    const playlist = await getPlaylist(id);
-    let tracks: MediaItem[] = [];
-    let tracksUnavailable: string | undefined;
-    try {
-      tracks = (await getPlaylistTracks(id)).map((track) => contextTrackItem(track, item.contextUri));
-    } catch (error) {
-      if (!(error instanceof ApiError && (error.status === 403 || error.kind === 'restricted'))) throw error;
-      // Spotify only returns the contents of playlists you own or collaborate on.
-      tracksUnavailable =
-        'Spotify zeigt die Titel nur bei eigenen Playlists an. Abspielen funktioniert trotzdem – tippe auf ▶︎.';
+  switch (item.kind) {
+    case 'album': {
+      const result = await getAlbum(id);
+      if (!result) throw new Error('Album nicht gefunden.');
+      const { album, tracks } = result;
+      return {
+        image: pickImage(album.images, 280),
+        title: album.name,
+        subtitle: [album.artists.map((artist) => artist.name).join(', '), album.release_date.slice(0, 4)]
+          .filter(Boolean)
+          .join(' · '),
+        listTitle: `${tracks.length} Titel`,
+        tracks: tracks.map((track) => contextTrackItem(track, album.uri, String(track.track_number))),
+        albums: [],
+      };
     }
-    return {
-      image: pickImage(playlist?.images ?? [], 280),
-      title: playlist?.name ?? item.title,
-      subtitle: item.subtitle,
-      tracks,
-      albums: [],
-      tracksUnavailable,
-    };
-  }
 
-  // Artist: Spotify removed "top tracks" for Development Mode apps, so show albums & singles.
-  const [artist, albums] = await Promise.all([getArtist(id), getArtistAlbums(id)]);
-  return {
-    image: pickImage(artist?.images ?? [], 280),
-    title: artist?.name ?? item.title,
-    subtitle: 'Künstler',
-    tracks: [],
-    albums: albums.map(albumItem),
-  };
+    case 'playlist': {
+      const playlist = await getPlaylist(id);
+      let tracks: MediaItem[] = [];
+      let tracksUnavailable: string | undefined;
+      try {
+        tracks = (await getPlaylistTracks(id)).map((entry) =>
+          entry.type === 'track' ? contextTrackItem(entry, item.contextUri) : episodeItem(entry, item.contextUri),
+        );
+      } catch (error) {
+        if (!(error instanceof ApiError && (error.status === 403 || error.kind === 'restricted'))) throw error;
+        // Spotify only returns the contents of playlists you own or collaborate on.
+        tracksUnavailable =
+          'Spotify zeigt die Titel nur bei eigenen Playlists an. Abspielen funktioniert trotzdem – tippe auf ▶︎.';
+      }
+      return {
+        image: pickImage(playlist?.images ?? [], 280),
+        title: playlist?.name ?? item.title,
+        subtitle: item.subtitle,
+        listTitle: `${tracks.length} Titel`,
+        tracks,
+        albums: [],
+        tracksUnavailable,
+      };
+    }
+
+    case 'liked': {
+      const liked = cachedLikedTracks() ?? (await getSavedTracks());
+      const uris = liked.map((track) => track.uri);
+      // There's no context uri for Lieblingssongs, so play the list itself (from the tapped song on).
+      const tracks = liked.map((track, index) => ({
+        ...contextTrackItem(track, LIKED_SONGS_URI),
+        play: { uris: uris.slice(index, index + MAX_URIS_PER_PLAY) },
+        fallback: undefined,
+      }));
+      return {
+        image: null,
+        title: 'Lieblingssongs',
+        subtitle: `${liked.length} Titel`,
+        listTitle: `${liked.length} Titel`,
+        tracks,
+        albums: [],
+        playAll: { uris: uris.slice(0, MAX_URIS_PER_PLAY) },
+      };
+    }
+
+    case 'show': {
+      const [show, episodes] = await Promise.all([getShow(id), getShowEpisodes(id)]);
+      return {
+        image: pickImage(show?.images ?? [], 280),
+        title: show?.name ?? item.title,
+        subtitle: show ? `Podcast · ${show.publisher}` : item.subtitle,
+        listTitle: 'Folgen',
+        tracks: episodes.map((episode) => episodeItem(episode, item.contextUri)),
+        albums: [],
+      };
+    }
+
+    case 'audiobook': {
+      const [audiobook, chapters] = await Promise.all([getAudiobook(id), getAudiobookChapters(id)]);
+      return {
+        image: pickImage(audiobook?.images ?? [], 280),
+        title: audiobook?.name ?? item.title,
+        subtitle: audiobook ? `Hörbuch · ${audiobook.authors.map((author) => author.name).join(', ')}` : item.subtitle,
+        listTitle: 'Kapitel',
+        tracks: chapters.map((chapter, index) => chapterItem(chapter, item.contextUri, index)),
+        albums: [],
+      };
+    }
+
+    default: {
+      // Artist: Spotify removed "top tracks" for Development Mode apps, so show albums & singles.
+      const [artist, albums] = await Promise.all([getArtist(id), getArtistAlbums(id)]);
+      return {
+        image: pickImage(artist?.images ?? [], 280),
+        title: artist?.name ?? item.title,
+        subtitle: 'Künstler',
+        listTitle: '',
+        tracks: [],
+        albums: albums.map(albumItem),
+      };
+    }
+  }
 }

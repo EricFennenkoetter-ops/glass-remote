@@ -1232,7 +1232,20 @@
   margin-bottom: var(--space-s);
 }
 
+.chips--scroll {
+  margin: 0 -20px var(--space-s);
+  padding: 2px 20px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.chips--scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .chip {
+  flex: none;
   min-height: 34px;
   padding: 0 14px;
   border-radius: var(--radius-pill);
@@ -1577,6 +1590,12 @@
 
 .list-row.is-current .list-row__number {
   color: var(--color-accent);
+}
+
+/* Lieblingssongs artwork (no image from Spotify) */
+.art--liked {
+  background: linear-gradient(135deg, #4c1fd6, #8fa4f0 70%, #c5e8e0);
+  color: #fff;
 }
 
 .list-row__chevron {

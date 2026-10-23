@@ -10,6 +10,7 @@ for size in 180 192 512; do
   sips -s format png -z "$size" "$size" "$SRC" --out "$OUT/icon-$size.png" >/dev/null
 done
 cp "$OUT/icon-180.png" "$OUT/chrome-180.png"
+cp "$OUT/icon-180.png" public/apple-touch-icon.png
 
 # Maskable (Android): motif inside the 80 % safe zone, padded with the icon's black background.
 sips -s format png -z 410 410 "$SRC" --out /tmp/glass-remote-maskable.png >/dev/null
