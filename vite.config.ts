@@ -10,6 +10,7 @@ const PUBLIC_SHELL_FILES = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png',
+  'icons/chrome-180.png',
   'icons/signal-180.png',
   'icons/mint-180.png',
   'icons/orb-180.png',

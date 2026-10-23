@@ -75,7 +75,7 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
               className={`icon-choice${appearance.icon === key ? ' is-active' : ''}`}
               onClick={() => updateAppearance({ icon: key })}
             >
-              <img src={`./icons/${key}-180.png`} alt="" width={60} height={60} />
+              <img src={`./icons/${key}-180.png`} alt="" width={52} height={52} />
               <span>{APP_ICONS[key]}</span>
             </button>
           ))}

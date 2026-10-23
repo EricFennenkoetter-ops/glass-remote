@@ -1721,8 +1721,8 @@
 
 .icon-choices {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-xs);
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
   padding: 0 var(--space-xs);
 }
 

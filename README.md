@@ -23,6 +23,7 @@ npm run dev            # → http://127.0.0.1:5173/
 | `npm run dev` | Dev-Server auf 127.0.0.1:5173 |
 | `npm run build` | Typecheck und Produktions-Build nach `dist/` |
 | `npm run preview` | Build lokal ansehen (127.0.0.1:4173) |
+| `npm run icons:custom` | Standard-Icon aus `assets/icon-chrome-source.jpg` erzeugen (macOS, nutzt `sips`) |
 | `npm run icons` | App-Icons neu rendern (`scripts/generate-icons.mjs`, mit `-- --preview datei.png` als Vorschaubild) |
 
 ## Checkliste: Was du im Spotify-Dashboard einträgst

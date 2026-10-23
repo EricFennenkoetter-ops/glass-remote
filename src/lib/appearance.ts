@@ -25,6 +25,7 @@ export const GLASS_LEVELS = {
 } as const;
 
 export const APP_ICONS = {
+  chrome: 'Chrom',
   signal: 'Signal',
   mint: 'Mint',
   orb: 'Orb',
@@ -47,7 +48,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   background: 'cover',
   glass: 'regular',
   motion: true,
-  icon: 'signal',
+  icon: 'chrome',
 };
 
 const listeners = new Set<() => void>();

@@ -2,7 +2,7 @@
 // Usage: npm run icons
 //
 // Variants (all selectable in the app under "Darstellung → App-Icon"):
-//   signal  – green glossy disc with a black "remote signal" on near-black (default)
+//   signal  – green glossy disc with a black "remote signal" on near-black
 //   mint    – frosted glass disc with play + sound waves on a green gradient
 //   orb     – liquid green orb with a white play symbol on black
 //   violet  – the original violet glass disc
@@ -11,7 +11,7 @@ import { deflateSync } from 'node:zlib';
 
 const OUT_DIR = new URL('../public/icons/', import.meta.url);
 const SUPERSAMPLING = 4;
-const DEFAULT_VARIANT = 'signal';
+// The default/manifest icons (icon-*.png) come from your own image: npm run icons:custom
 
 // ---------- PNG encoding ----------
 
@@ -249,13 +249,6 @@ const write = (name, size, rgba) => {
 for (const [name, shade] of Object.entries(VARIANTS)) {
   write(`${name}-180.png`, 180, render(shade, 180, false));
 }
-
-// Manifest/default icons.
-const defaultShade = VARIANTS[DEFAULT_VARIANT];
-write('icon-180.png', 180, render(defaultShade, 180, false));
-write('icon-192.png', 192, render(defaultShade, 192, false));
-write('icon-512.png', 512, render(defaultShade, 512, false));
-write('icon-maskable-512.png', 512, render(defaultShade, 512, true));
 
 // Preview sheet (not shipped): all variants side by side with rounded iOS-style corners.
 if (process.argv.includes('--preview')) {
