@@ -1,0 +1,106 @@
+/*
+ * Design tokens.
+ * Naming mirrors SwiftUI / UIKit concepts so phase 2 (native app) can reuse them 1:1:
+ *   --color-label-*      → Color(.label), .secondaryLabel, .tertiaryLabel
+ *   --glass-*            → .glassEffect(.regular / .clear), tint, highlight
+ *   --radius-*           → RoundedRectangle(cornerRadius:)
+ *   --space-*            → padding / spacing values (pt)
+ *   --motion-spring-*    → .spring(duration:bounce:)
+ * See README → "Design-Tokens".
+ */
+:root {
+  /* Colour: labels on glass (all pass WCAG AA on --glass-tint-text + scrim) */
+  --color-label-primary: rgba(255, 255, 255, 1);
+  --color-label-secondary: rgba(255, 255, 255, 0.78);
+  --color-label-tertiary: rgba(255, 255, 255, 0.6);
+  --color-background: #0b0b10;
+  --color-danger: #ff6b6b;
+
+  /* Dynamic, set from the cover palette (see useCoverPalette) */
+  --color-accent: #b9a7ff;
+  --color-blob-1: #6d28d9;
+  --color-blob-2: #be185d;
+  --color-blob-3: #0f766e;
+  --scrim-strength: 0.35;
+
+  /* Glass: fills */
+  --glass-fill-clear: rgba(255, 255, 255, 0.08);
+  --glass-fill-regular: rgba(255, 255, 255, 0.12);
+  --glass-fill-prominent: rgba(255, 255, 255, 0.16);
+  --glass-fill-pressed: rgba(255, 255, 255, 0.22);
+  /* Darker base under text-bearing glass so white text stays readable on bright covers */
+  --glass-tint-text: rgba(12, 12, 18, 0.34);
+  --glass-tint-thick: rgba(14, 14, 22, 0.6);
+
+  /* Glass: material */
+  --glass-blur: blur(24px) saturate(180%);
+  --glass-blur-thick: blur(40px) saturate(180%);
+  --glass-edge: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.14) 35%,
+    rgba(255, 255, 255, 0.05) 60%,
+    rgba(255, 255, 255, 0.22) 100%
+  );
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --glass-lowlight: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.18);
+  --glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 42%);
+  --glass-specular: radial-gradient(120% 80% at 18% -10%, rgba(255, 255, 255, 0.22), transparent 55%);
+
+  /* Shape */
+  --radius-s: 14px;
+  --radius-m: 20px;
+  --radius-l: 28px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  /* Spacing (pt) */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-s: 12px;
+  --space-m: 16px;
+  --space-l: 24px;
+  --space-xl: 32px;
+
+  /* Sizes */
+  --control-size-s: 44px; /* Apple minimum hit target */
+  --control-size-m: 52px;
+  --control-size-l: 76px;
+
+  /* Typography (SF Pro via system stack) */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+  --font-size-caption: 12px;
+  --font-size-footnote: 13px;
+  --font-size-body: 17px;
+  --font-size-title: 22px;
+  --font-size-large-title: 28px;
+  --text-shadow-on-glass: 0 1px 2px rgba(0, 0, 0, 0.35);
+
+  /* Motion */
+  --motion-press-scale: 0.96;
+  --motion-duration-fast: 160ms;
+  --motion-duration-crossfade: 600ms;
+  --motion-duration-sheet: 600ms;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /* spring(duration: 0.6, bounce: ~0.03) – sheets */
+  --motion-spring-smooth: linear(0, 0.041, 0.137, 0.259, 0.391, 0.519, 0.635, 0.735, 0.818, 0.884, 0.935, 0.972, 0.997, 1.014, 1.024, 1.028, 1.029, 1.027, 1.024, 1.021, 1.017, 1.013, 1.01, 1.007, 1.005, 1.003, 1.002, 1.001, 1, 1, 1);
+  /* spring(duration: 0.5, bounce: ~0.1) – buttons */
+  --motion-spring-bouncy: linear(0, 0.057, 0.189, 0.357, 0.533, 0.696, 0.835, 0.944, 1.022, 1.072, 1.098, 1.105, 1.1, 1.087, 1.069, 1.05, 1.033, 1.018, 1.007, 0.998, 0.993, 0.99, 0.989, 0.989, 0.991, 1);
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-spring-smooth: var(--motion-ease-out);
+    --motion-spring-bouncy: var(--motion-ease-out);
+    --motion-duration-sheet: 200ms;
+    --motion-duration-crossfade: 200ms;
+    --motion-press-scale: 1;
+  }
+}
