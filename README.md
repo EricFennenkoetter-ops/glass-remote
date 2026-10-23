@@ -70,6 +70,8 @@ Die Redirect-URI muss Zeichen für Zeichen mit dem Dashboard übereinstimmen. L�
 
 > **Icon zeigt nur ein „G“?** iOS 26 hat einen Fehler mit Icons aus dem Web-Manifest ([WebKit-Bug 256429](https://onbugs.webkit.org/show_bug.cgi?id=256429)): Die Vorschau stimmt, auf dem Home-Bildschirm landet aber der Anfangsbuchstabe. Das Manifest enthält deshalb bewusst keine `icons`, und iOS nimmt `apple-touch-icon.png`. Nach einer Icon-Änderung das alte Icon löschen, in Safari die Websitedaten von `github.io` löschen (Einstellungen → Apps → Safari → Erweitert → Websitedaten) und die Seite neu hinzufügen. Der Service Worker liefert Manifest und Icons inzwischen immer frisch aus dem Netz.
 
+> **iOS 27.2: Icon bleibt ein Buchstabe.** In iOS 27.2 ignoriert Safari beim Hinzufügen zum Home-Bildschirm jedes Web-App-Icon (`apple-touch-icon` und Manifest), auch bei fremden Seiten wie squoosh.app. Umgehung: das Profil `glass-remote.mobileconfig` installieren (Safari: `<url>/glass-remote.mobileconfig` öffnen, dann Einstellungen → Profil geladen → Installieren). Es legt nur den Home-Bildschirm-Eintrag mit Icon an. Neu erzeugen mit `python3 scripts/make-webclip-profile.py <app-url>`, zum Beispiel nach einem Icon-Wechsel.
+
 ### Login-Fallback (iOS Standalone)
 
 Safari und Home-Bildschirm-Apps haben unter iOS getrennten Speicher. Die App startet den Login deshalb im selben Fenster (`window.location.assign`), und die Redirect-URI führt zurück auf dieselbe Origin. Landet die Rückleitung trotzdem in Safari, meldet die App „Die Anmeldung ist in einem anderen Fenster gelandet …“. Dann so vorgehen:
