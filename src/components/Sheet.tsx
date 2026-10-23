@@ -8,6 +8,10 @@ type SheetProps = {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** Non-scrolling area under the title, e.g. a search field. */
+  toolbar?: ReactNode;
+  /** full: always as tall as possible (keeps the layout stable while results load). */
+  size?: 'auto' | 'full';
 };
 
 const DISMISS_DISTANCE_PX = 110;
@@ -15,7 +19,7 @@ const DISMISS_VELOCITY = 0.6; // px per ms
 const EXIT_FALLBACK_MS = 700;
 
 /** Bottom sheet with spring in/out, drag-to-dismiss on the header, Escape and backdrop tap. */
-export function Sheet({ open, title, onClose, children }: SheetProps) {
+export function Sheet({ open, title, onClose, children, toolbar, size = 'auto' }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -95,7 +99,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
       <div className="sheet-backdrop" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
-        className="sheet glass glass--thick"
+        className={`sheet glass glass--thick${size === 'full' ? ' sheet--full' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -111,6 +115,7 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
             <Icon name="close" size={18} />
           </GlassButton>
         </header>
+        {toolbar && <div className="sheet__toolbar">{toolbar}</div>}
         <div className="sheet__content">{children}</div>
       </div>
     </div>,

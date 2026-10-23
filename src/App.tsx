@@ -19,6 +19,7 @@ import { Login } from './screens/Login';
 import { MessageScreen } from './screens/MessageScreen';
 import { NowPlaying } from './screens/NowPlaying';
 import { QueueSheet } from './screens/QueueSheet';
+import { SearchSheet } from './screens/SearchSheet';
 
 // Module level so React StrictMode's double effect can't exchange the one-time code twice.
 let callbackExchange: Promise<void> | null = null;
@@ -84,10 +85,11 @@ export function App() {
 
 function Remote() {
   const { player, snapshot } = usePlayer();
-  const [sheet, setSheet] = useState<'queue' | 'devices' | null>(null);
+  const [sheet, setSheet] = useState<'queue' | 'devices' | 'search' | null>(null);
   const closeSheet = useCallback(() => setSheet(null), []);
   const openDevices = useCallback(() => setSheet('devices'), []);
   const openQueue = useCallback(() => setSheet('queue'), []);
+  const openSearch = useCallback(() => setSheet('search'), []);
 
   const item = snapshot.playback?.item ?? null;
   const info = useMemo(() => (item ? describeItem(item) : null), [item]);
@@ -113,7 +115,7 @@ function Remote() {
       </main>
     );
   } else if (snapshot.status === 'idle') {
-    screen = <Idle onOpenDevices={openDevices} />;
+    screen = <Idle onOpenDevices={openDevices} onOpenSearch={openSearch} />;
   } else {
     screen = (
       <NowPlaying
@@ -122,6 +124,7 @@ function Remote() {
         player={player}
         onOpenQueue={openQueue}
         onOpenDevices={openDevices}
+        onOpenSearch={openSearch}
       />
     );
   }
@@ -132,6 +135,7 @@ function Remote() {
       {screen}
       <QueueSheet open={sheet === 'queue'} onClose={closeSheet} currentKey={info?.key ?? null} />
       <DevicesSheet open={sheet === 'devices'} onClose={closeSheet} onTransfer={player.transferTo} />
+      <SearchSheet open={sheet === 'search'} onClose={closeSheet} player={player} />
     </>
   );
 }

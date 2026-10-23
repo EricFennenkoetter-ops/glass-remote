@@ -14,7 +14,7 @@ export type ItemInfo = {
 };
 
 /** Spotify returns images sorted widest first; pick the smallest one that is still ≥ minWidth. */
-function pickImage(images: SpotifyImage[], minWidth: number): string | null {
+export function pickImage(images: SpotifyImage[], minWidth: number): string | null {
   if (images.length === 0) return null;
   const sorted = [...images].sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
   return (sorted.find((image) => (image.width ?? 0) >= minWidth) ?? sorted[sorted.length - 1])?.url ?? null;

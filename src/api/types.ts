@@ -10,7 +10,7 @@ export type Track = {
   name: string;
   duration_ms: number;
   artists: { name: string }[];
-  album: { name: string; images: SpotifyImage[] };
+  album: { uri: string; name: string; images: SpotifyImage[] };
 };
 
 export type Episode = {
@@ -84,3 +84,41 @@ export type QueueResponse = {
 };
 
 export type DevicesResponse = { devices: Device[] };
+
+export type SimplifiedAlbum = {
+  type: 'album';
+  uri: string;
+  name: string;
+  album_type: string;
+  release_date: string;
+  artists: { name: string }[];
+  images: SpotifyImage[];
+};
+
+export type Artist = {
+  type: 'artist';
+  uri: string;
+  name: string;
+  images: SpotifyImage[];
+};
+
+export type SimplifiedPlaylist = {
+  type: 'playlist';
+  uri: string;
+  name: string;
+  images: SpotifyImage[] | null;
+  owner: { display_name: string | null };
+  /** Current field for the item count; `tracks` is the deprecated predecessor. */
+  items?: { total: number };
+  tracks?: { total: number };
+};
+
+/** Spotify can return null entries for unavailable items. */
+export type Paging<T> = { items: (T | null)[]; total: number; next: string | null };
+
+export type SearchResponse = {
+  tracks?: Paging<Track>;
+  artists?: Paging<Artist>;
+  albums?: Paging<SimplifiedAlbum>;
+  playlists?: Paging<SimplifiedPlaylist>;
+};

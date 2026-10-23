@@ -11,7 +11,12 @@ export const SCOPES = [
   'user-read-playback-state',
   'user-modify-playback-state',
   'user-read-currently-playing',
+  'playlist-read-private',
+  'playlist-read-collaborative',
 ] as const;
+
+/** Needed for "Deine Playlists"; sessions from before this feature don't have them yet. */
+export const PLAYLIST_SCOPES = ['playlist-read-private', 'playlist-read-collaborative'] as const;
 
 export const ACCOUNTS_BASE = 'https://accounts.spotify.com';
 export const API_BASE = 'https://api.spotify.com/v1';

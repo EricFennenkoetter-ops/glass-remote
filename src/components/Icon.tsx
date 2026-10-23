@@ -49,6 +49,24 @@ const PATHS = {
       d="M4 6h12M4 11h12M4 16h7m6-2.5v6m0 0-2.2-2.2M17 19.5l2.2-2.2"
     />
   ),
+  search: (
+    <path
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      d="M10.5 17.5a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 5 5"
+    />
+  ),
+  addToQueue: (
+    <path
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      d="M4 6h11M4 11h11M4 16h7m7-4v8m-4-4h8"
+    />
+  ),
   devices: (
     <>
       <rect x="3" y="4" width="13" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />

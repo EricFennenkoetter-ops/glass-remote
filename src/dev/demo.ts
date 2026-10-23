@@ -44,6 +44,7 @@ function toTrack(track: DemoTrack, index: number): Track {
     duration_ms: track.durationMs,
     artists: [{ name: track.artist }],
     album: {
+      uri: `spotify:album:demo${index}`,
       name: track.album,
       images: [
         { url: large, width: 640, height: 640 },
@@ -57,7 +58,12 @@ function toTrack(track: DemoTrack, index: number): Track {
 export function installDemo(): void {
   localStorage.setItem(
     'glass-remote.tokens',
-    JSON.stringify({ accessToken: 'demo', refreshToken: 'demo', expiresAt: Date.now() + 365 * 24 * 3600_000 }),
+    JSON.stringify({
+      accessToken: 'demo',
+      refreshToken: 'demo',
+      expiresAt: Date.now() + 365 * 24 * 3600_000,
+      scope: 'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative',
+    }),
   );
 
   const tracks = TRACKS.map(toTrack);
@@ -125,9 +131,36 @@ export function installDemo(): void {
       return json({ devices: devices.map((d) => ({ ...d, is_active: d.id === state.deviceId })) });
     }
     if (path === '/me/player/play') {
+      const body = init?.body ? (JSON.parse(String(init.body)) as { uris?: string[]; context_uri?: string; offset?: { uri: string } }) : {};
+      const targetUri = body.offset?.uri ?? body.uris?.[0] ?? body.context_uri;
+      if (targetUri) {
+        const index = tracks.findIndex((t) => t.uri === targetUri || t.album.uri === targetUri);
+        state.index = index >= 0 ? index : (state.index + 1) % tracks.length;
+        state.progress = 0;
+      }
+      const requestedDevice = url.searchParams.get('device_id');
+      if (requestedDevice) state.deviceId = requestedDevice;
       state.since = Date.now();
       state.playing = true;
       return empty();
+    }
+    if (method === 'POST' && path === '/me/player/queue') {
+      return empty();
+    }
+    if (method === 'GET' && path === '/search') {
+      const q = (url.searchParams.get('q') ?? '').toLowerCase();
+      const hits = tracks.filter((t) => `${t.name} ${t.artists[0]?.name} ${t.album.name}`.toLowerCase().includes(q));
+      const paging = <T>(items: T[]) => ({ items, total: items.length, next: null });
+      return json({
+        tracks: paging(hits),
+        artists: paging(hits.map((t, i) => ({ type: 'artist', uri: `spotify:artist:demo${i}`, name: t.artists[0]?.name, images: t.album.images }))),
+        albums: paging(hits.map((t) => ({ type: 'album', uri: t.album.uri, name: t.album.name, album_type: 'album', release_date: '2025-03-14', artists: t.artists, images: t.album.images }))),
+        playlists: paging(hits.length ? [null, { type: 'playlist', uri: 'spotify:playlist:demo', name: `Das ist ${hits[0]?.artists[0]?.name}`, images: hits[0]?.album.images, owner: { display_name: 'Spotify' }, items: { total: 50 } }] : []),
+      });
+    }
+    if (method === 'GET' && path === '/me/playlists') {
+      const items = tracks.map((t, i) => ({ type: 'playlist', uri: `spotify:playlist:mine${i}`, name: ['Chill am Abend', 'Sommer 2026', 'Autofahrt', 'Fokus'][i], images: t.album.images, owner: { display_name: 'Eric' }, items: { total: 20 + i * 7 } }));
+      return json({ items, total: items.length, next: null });
     }
     if (path === '/me/player/pause') {
       freeze();

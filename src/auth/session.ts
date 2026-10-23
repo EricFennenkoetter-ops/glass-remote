@@ -6,6 +6,8 @@ type Tokens = {
   refreshToken: string;
   /** Epoch ms */
   expiresAt: number;
+  /** Space-separated scopes Spotify granted; empty for sessions from older app versions. */
+  scope: string;
 };
 
 type TokenResponse = {
@@ -52,7 +54,12 @@ function readTokens(): Tokens | null {
       typeof parsed.refreshToken === 'string' &&
       typeof parsed.expiresAt === 'number'
     ) {
-      return { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken, expiresAt: parsed.expiresAt };
+      return {
+        accessToken: parsed.accessToken,
+        refreshToken: parsed.refreshToken,
+        expiresAt: parsed.expiresAt,
+        scope: 'scope' in parsed && typeof parsed.scope === 'string' ? parsed.scope : '',
+      };
     }
   } catch {
     // Corrupt or inaccessible storage → treat as logged out.
@@ -78,6 +85,12 @@ export function subscribeSession(listener: () => void): () => void {
 
 export function isLoggedIn(): boolean {
   return tokens !== null;
+}
+
+/** True if the current session was granted every given scope (new scopes need a fresh login). */
+export function hasScopes(required: readonly string[]): boolean {
+  const granted = new Set(tokens?.scope.split(' ') ?? []);
+  return required.every((scope) => granted.has(scope));
 }
 
 export function logout(): void {
@@ -164,7 +177,7 @@ export async function completeLoginFromCallback(): Promise<void> {
   if (!response.ok) {
     throw new AuthError(await describeTokenError(response), 'exchange-failed');
   }
-  storeTokenResponse(await response.json(), null);
+  storeTokenResponse(await response.json(), null, '');
 }
 
 // ---------- access token + refresh ----------
@@ -180,13 +193,13 @@ export async function getAccessToken(): Promise<string> {
 
 /** Refreshes once even if called concurrently (e.g. several 401s at the same time). */
 export function refreshAccessToken(): Promise<string> {
-  refreshInFlight ??= runRefresh(tokens?.refreshToken).finally(() => {
+  refreshInFlight ??= runRefresh(tokens?.refreshToken, tokens?.scope ?? '').finally(() => {
     refreshInFlight = null;
   });
   return refreshInFlight;
 }
 
-async function runRefresh(refreshToken: string | undefined): Promise<string> {
+async function runRefresh(refreshToken: string | undefined, previousScope: string): Promise<string> {
   if (!refreshToken) throw new AuthError('Nicht angemeldet.', 'session-expired');
   const response = await requestToken({
     grant_type: 'refresh_token',
@@ -201,7 +214,7 @@ async function runRefresh(refreshToken: string | undefined): Promise<string> {
     }
     throw new Error(await describeTokenError(response));
   }
-  return storeTokenResponse(await response.json(), refreshToken);
+  return storeTokenResponse(await response.json(), refreshToken, previousScope);
 }
 
 function requestToken(body: Record<string, string>): Promise<Response> {
@@ -212,13 +225,14 @@ function requestToken(body: Record<string, string>): Promise<Response> {
   });
 }
 
-function storeTokenResponse(data: TokenResponse, previousRefreshToken: string | null): string {
+function storeTokenResponse(data: TokenResponse, previousRefreshToken: string | null, previousScope: string): string {
   const refreshToken = data.refresh_token ?? previousRefreshToken;
   if (!refreshToken) throw new AuthError('Spotify hat kein Refresh-Token geliefert.', 'exchange-failed');
   setTokens({
     accessToken: data.access_token,
     refreshToken,
     expiresAt: Date.now() + data.expires_in * 1000,
+    scope: data.scope ?? previousScope,
   });
   return data.access_token;
 }
@@ -257,5 +271,5 @@ export async function importSessionCode(code: string): Promise<void> {
   } catch {
     throw new AuthError('Das ist kein gültiger Übertragungscode.', 'invalid-transfer');
   }
-  await runRefresh(refreshToken);
+  await runRefresh(refreshToken, '');
 }

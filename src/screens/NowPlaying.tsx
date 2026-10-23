@@ -13,6 +13,7 @@ type NowPlayingProps = {
   player: PlayerEngine;
   onOpenQueue: () => void;
   onOpenDevices: () => void;
+  onOpenSearch: () => void;
 };
 
 const REPEAT_LABELS = {
@@ -21,7 +22,7 @@ const REPEAT_LABELS = {
   track: 'Titel wiederholen',
 } as const;
 
-export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices }: NowPlayingProps) {
+export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices, onOpenSearch }: NowPlayingProps) {
   const playback = snapshot.playback;
   const isAd = playback?.currently_playing_type === 'ad';
   const disallows = playback?.actions?.disallows ?? {};
@@ -40,9 +41,14 @@ export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices 
           <Icon name={device ? deviceIcon(device.type) : 'devices'} size={18} />
           <span className="device-pill__name">{device?.name ?? 'Gerät wählen'}</span>
         </GlassButton>
-        <GlassButton variant="floating" size="s" aria-label="Warteschlange" onClick={onOpenQueue}>
-          <Icon name="queue" size={20} />
-        </GlassButton>
+        <div className="top-bar__actions">
+          <GlassButton variant="floating" size="s" aria-label="Suchen" onClick={onOpenSearch}>
+            <Icon name="search" size={20} />
+          </GlassButton>
+          <GlassButton variant="floating" size="s" aria-label="Warteschlange" onClick={onOpenQueue}>
+            <Icon name="queue" size={20} />
+          </GlassButton>
+        </div>
       </header>
 
       {snapshot.notice && (

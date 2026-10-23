@@ -188,16 +188,18 @@ export function createPlayerEngine() {
     return progressAt(snapshot, now);
   }
 
-  async function command(call: () => Promise<unknown>, repollMs = 500) {
+  /** Runs a player command; resolves false (after undoing optimistic state and telling the user) on failure. */
+  async function command(call: () => Promise<unknown>, repollMs = 500): Promise<boolean> {
     if (Date.now() < blockedUntil) {
       showToast('Spotify bremst gerade – gleich nochmal versuchen.');
       overrides = {};
       publish({});
-      return;
+      return false;
     }
     try {
       await call();
       schedule(repollMs);
+      return true;
     } catch (error) {
       // Undo optimistic changes; the next poll shows the truth.
       overrides = {};
@@ -208,12 +210,39 @@ export function createPlayerEngine() {
         }
         // Premium is shown as a persistent notice instead of a toast.
         if (error.kind === 'premium-required') publish({ notice: error });
-        else showToast(error.kind === 'no-active-device' ? 'Kein aktives Gerät – wähle eins aus.' : error.message);
+        else showToast(error.kind === 'no-active-device' ? 'Kein Spotify-Gerät gefunden – öffne kurz die Spotify-App.' : error.message);
       } else if (!(error instanceof AuthError)) {
         console.error(error);
         showToast('Das hat nicht geklappt.');
       }
       schedule(0);
+      return false;
+    }
+  }
+
+  /** The device to start on when nothing is active: a smartphone if possible, else any controllable one. */
+  async function findDeviceId(): Promise<string | undefined> {
+    const usable = (await api.getDevices()).filter((device) => device.id && !device.is_restricted);
+    const device = usable.find((d) => d.is_active) ?? usable.find((d) => d.type === 'Smartphone') ?? usable[0];
+    return device?.id ?? undefined;
+  }
+
+  async function startOnSomeDevice(request: api.PlayRequest, fallback?: api.PlayRequest) {
+    const deviceId = snapshot.status === 'idle' ? await findDeviceId() : undefined;
+    try {
+      await api.startPlayback(request, deviceId);
+    } catch (error) {
+      if (!(error instanceof ApiError)) throw error;
+      if (error.kind === 'no-active-device' && !deviceId) {
+        const retryDeviceId = await findDeviceId();
+        if (!retryDeviceId) throw error;
+        await api.startPlayback(request, retryDeviceId);
+      } else if (fallback && error.kind === 'unknown' && (error.status === 400 || error.status === 404)) {
+        // e.g. a relinked track that isn't part of the album context → play it on its own.
+        await api.startPlayback(fallback, deviceId);
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -296,6 +325,16 @@ export function createPlayerEngine() {
       const sinceLast = performance.now() - volumeLastSent;
       if (sinceLast >= VOLUME_SEND_INTERVAL_MS) sendVolume();
       else volumeTimer = window.setTimeout(sendVolume, VOLUME_SEND_INTERVAL_MS - sinceLast);
+    },
+    /** Starts something new (search result, playlist …); resolves true when Spotify accepted it. */
+    playItem(request: api.PlayRequest, fallback?: api.PlayRequest): Promise<boolean> {
+      setOverride('isPlaying', true);
+      setOverride('seek', 0);
+      publish({ anchor: { ms: 0, at: performance.now() } });
+      return command(() => startOnSomeDevice(request, fallback), 400);
+    },
+    async addToQueue(uri: string) {
+      if (await command(() => api.addToQueue(uri), 1500)) showToast('Zur Warteschlange hinzugefügt', 'info');
     },
     async transferTo(deviceId: string) {
       // From the idle state there is nothing to resume, so start playing on the target.
