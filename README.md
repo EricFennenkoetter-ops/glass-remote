@@ -68,7 +68,7 @@ Die Redirect-URI muss Zeichen für Zeichen mit dem Dashboard übereinstimmen. L�
 3. Die App **vom Home-Bildschirm** starten und dort auf **Mit Spotify verbinden** tippen. Den Login unbedingt in der installierten App testen, nicht nur in Safari.
 4. Spotify auf einem Gerät öffnen und etwas abspielen. Glass Remote zeigt es dann an.
 
-> **Icon zeigt nur ein „G“?** iOS 26 hat einen Fehler mit Icons aus dem Web-Manifest ([WebKit-Bug 256429](https://onbugs.webkit.org/show_bug.cgi?id=256429)): Die Vorschau stimmt, auf dem Home-Bildschirm landet aber der Anfangsbuchstabe. Das Manifest enthält deshalb bewusst keine `icons`, und iOS nimmt `apple-touch-icon.png`. Nach einer Icon-Änderung das alte Icon löschen und die Seite neu hinzufügen.
+> **Icon zeigt nur ein „G“?** iOS 26 hat einen Fehler mit Icons aus dem Web-Manifest ([WebKit-Bug 256429](https://onbugs.webkit.org/show_bug.cgi?id=256429)): Die Vorschau stimmt, auf dem Home-Bildschirm landet aber der Anfangsbuchstabe. Das Manifest enthält deshalb bewusst keine `icons`, und iOS nimmt `apple-touch-icon.png`. Nach einer Icon-Änderung das alte Icon löschen, in Safari die Websitedaten von `github.io` löschen (Einstellungen → Apps → Safari → Erweitert → Websitedaten) und die Seite neu hinzufügen. Der Service Worker liefert Manifest und Icons inzwischen immer frisch aus dem Netz.
 
 ### Login-Fallback (iOS Standalone)
 
