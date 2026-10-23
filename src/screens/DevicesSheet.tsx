@@ -10,13 +10,18 @@ import { showToast } from '../lib/toast';
 
 type DevicesSheetProps = {
   open: boolean;
+  /** Opened because something should start and the app doesn't know where. */
+  choosingForPlayback: boolean;
   onClose: () => void;
-  onTransfer: (deviceId: string) => Promise<void>;
+  onSelect: (device: Device) => Promise<boolean>;
 };
 
 const REFRESH_MS = 5000;
 
-export function DevicesSheet({ open, onClose, onTransfer }: DevicesSheetProps) {
+const isIOS = () =>
+  /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+export function DevicesSheet({ open, choosingForPlayback, onClose, onSelect }: DevicesSheetProps) {
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
@@ -37,25 +42,35 @@ export function DevicesSheet({ open, onClose, onTransfer }: DevicesSheetProps) {
       }
       if (!cancelled) timer = window.setTimeout(load, REFRESH_MS);
     };
+    // Coming back from the Spotify app (see "iPhone fehlt?") → reload right away.
+    const onVisible = () => {
+      if (document.hidden) return;
+      window.clearTimeout(timer);
+      void load();
+    };
     void load();
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [open]);
 
   const select = async (device: Device) => {
-    if (!device.id || device.is_active || device.is_restricted) return;
+    if (!device.id || device.is_restricted || (device.is_active && !choosingForPlayback)) return;
     setSwitchingTo(device.id);
     // Optimistic: mark the target active right away.
     setDevices((list) => list?.map((d) => ({ ...d, is_active: d.id === device.id })) ?? null);
-    await onTransfer(device.id);
+    await onSelect(device);
     setSwitchingTo(null);
     onClose();
   };
 
+  const phoneMissing = devices !== null && isIOS() && !devices.some((device) => device.type === 'Smartphone');
+
   return (
-    <Sheet open={open} title="Wiedergabe auf" onClose={onClose}>
+    <Sheet open={open} title={choosingForPlayback ? 'Wo abspielen?' : 'Wiedergabe auf'} onClose={onClose}>
       {error && <p className="sheet__message sheet__message--error">{error}</p>}
       {devices === null && !error && <p className="sheet__message">Suche Geräte …</p>}
       {devices?.length === 0 && (
@@ -98,6 +113,24 @@ export function DevicesSheet({ open, onClose, onTransfer }: DevicesSheetProps) {
             );
           })}
         </ul>
+      )}
+      {phoneMissing && (
+        <div className="device-hint glass glass--text">
+          <p className="device-hint__title">Dein iPhone fehlt?</p>
+          <p className="sheet__hint">
+            Spotify zeigt dein iPhone nur an, solange die Spotify-App dort wach ist. Öffne sie kurz und komm dann
+            hierher zurück (oben links auf „Glass Remote“ tippen).
+          </p>
+          <GlassButton
+            variant="primary"
+            size="pill"
+            onClick={() => {
+              window.location.href = 'spotify:';
+            }}
+          >
+            Spotify-App öffnen
+          </GlassButton>
+        </div>
       )}
       <AccountFooter onClose={onClose} />
     </Sheet>

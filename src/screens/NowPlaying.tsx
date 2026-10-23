@@ -1,3 +1,4 @@
+import type { HTMLAttributes } from 'react';
 import type { DisallowKey } from '../api/types';
 import { Cover } from '../components/Cover';
 import { GlassButton } from '../components/GlassButton';
@@ -13,7 +14,9 @@ type NowPlayingProps = {
   player: PlayerEngine;
   onOpenQueue: () => void;
   onOpenDevices: () => void;
-  onOpenSearch: () => void;
+  onClose: () => void;
+  /** Pull-down-to-close handlers for the header. */
+  dragHandlers: HTMLAttributes<HTMLElement>;
 };
 
 const REPEAT_LABELS = {
@@ -22,7 +25,7 @@ const REPEAT_LABELS = {
   track: 'Titel wiederholen',
 } as const;
 
-export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices, onOpenSearch }: NowPlayingProps) {
+export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices, onClose, dragHandlers }: NowPlayingProps) {
   const playback = snapshot.playback;
   const isAd = playback?.currently_playing_type === 'ad';
   const disallows = playback?.actions?.disallows ?? {};
@@ -36,19 +39,18 @@ export function NowPlaying({ snapshot, info, player, onOpenQueue, onOpenDevices,
 
   return (
     <main className="screen now-playing">
-      <header className="top-bar">
+      <header className="top-bar top-bar--player" {...dragHandlers}>
+        <div className="top-bar__grabber" aria-hidden="true" />
+        <GlassButton variant="floating" size="s" aria-label="Player schließen" onClick={onClose}>
+          <Icon name="chevronDown" size={22} />
+        </GlassButton>
         <GlassButton variant="floating" size="pill" className="device-pill" onClick={onOpenDevices}>
           <Icon name={device ? deviceIcon(device.type) : 'devices'} size={18} />
           <span className="device-pill__name">{device?.name ?? 'Gerät wählen'}</span>
         </GlassButton>
-        <div className="top-bar__actions">
-          <GlassButton variant="floating" size="s" aria-label="Suchen" onClick={onOpenSearch}>
-            <Icon name="search" size={20} />
-          </GlassButton>
-          <GlassButton variant="floating" size="s" aria-label="Warteschlange" onClick={onOpenQueue}>
-            <Icon name="queue" size={20} />
-          </GlassButton>
-        </div>
+        <GlassButton variant="floating" size="s" aria-label="Warteschlange" onClick={onOpenQueue}>
+          <Icon name="queue" size={20} />
+        </GlassButton>
       </header>
 
       {snapshot.notice && (

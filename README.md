@@ -79,6 +79,16 @@ Der Code enthält dein Refresh-Token. Teile ihn mit niemandem.
 
 ## Was die App macht
 
+**Aufbau wie Spotify:** Unten liegt eine Tab-Leiste mit *Start · Suchen · Bibliothek*, darüber ein Mini-Player. Antippen öffnet den großen Player, Herunterziehen schließt ihn wieder.
+
+- **Start:** Begrüßung, Kacheln deiner zuletzt genutzten Alben und Playlists, dazu die Bereiche „Zuletzt gehört“, „Deine Top-Künstler“, „Gerade oft gehört“ und „Deine Playlists“.
+- **Suchen:** Titel, Künstler, Alben und Playlists, höchstens 10 Treffer pro Typ (Limit im Development Mode). Antippen spielt ab, „+“ hängt einen Titel an die Warteschlange.
+- **Bibliothek:** Playlists, Top-Künstler und zuletzt gehörte Titel.
+- **Gerätewahl:** Läuft nichts und es ist unklar, wo abgespielt werden soll, fragt die App „Wo abspielen?“ und merkt sich die Wahl. Fehlt das iPhone in der Liste, schläft die Spotify-App dort. Der Knopf „Spotify-App öffnen“ weckt sie auf.
+
+Start und Bibliothek brauchen die Berechtigungen `playlist-read-private`, `playlist-read-collaborative`, `user-read-recently-played` und `user-top-read`. Sitzungen aus älteren Versionen sehen deshalb den Knopf „Neu mit Spotify verbinden“.
+
+
 - **Polling:** Alle 1,5 s, solange Musik läuft, und alle 4 s im Leerlauf. Dazwischen zählt der Fortschritt lokal per `requestAnimationFrame` hoch. Ist die App im Hintergrund, pausiert das Polling (`visibilitychange`). Alle Development-Mode-Apps eines Kontos teilen sich ein Kontingent, deshalb ist das Intervall bewusst nicht kürzer.
 - **Optimistische UI:** Play/Pause, Shuffle, Repeat, Seek und Lautstärke reagieren sofort. Ein optimistischer Wert gilt bis zu 3 s lang, bis der Poll ihn bestätigt. Schlägt der Befehl fehl, wird er zurückgenommen und sofort neu gepollt. Die Lautstärke wird gedrosselt gesendet, höchstens alle 300 ms.
 - **Fehler:**

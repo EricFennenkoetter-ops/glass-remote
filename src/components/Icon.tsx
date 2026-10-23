@@ -49,6 +49,27 @@ const PATHS = {
       d="M4 6h12M4 11h12M4 16h7m6-2.5v6m0 0-2.2-2.2M17 19.5l2.2-2.2"
     />
   ),
+  home: (
+    <path
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinejoin="round"
+      d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1v-8.5Z"
+    />
+  ),
+  library: (
+    <path
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      d="M5 4v16M10 4v16m4.5-15.5 4.5 15"
+    />
+  ),
+  chevronDown: (
+    <path d="m6 9.5 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+  ),
   search: (
     <path
       fill="none"

@@ -1,6 +1,6 @@
 import { ApiError } from '../api/client';
 import * as api from '../api/player';
-import type { PlaybackState, RepeatState } from '../api/types';
+import type { Device, PlaybackState, RepeatState } from '../api/types';
 import { AuthError } from '../auth/session';
 import { POLL_INTERVAL_IDLE_MS, POLL_INTERVAL_PLAYING_MS } from '../config';
 import { showToast } from '../lib/toast';
@@ -11,6 +11,29 @@ const OPTIMISTIC_WINDOW_MS = 3000;
 const SEEK_TOLERANCE_MS = 2500;
 const VOLUME_SEND_INTERVAL_MS = 300;
 const NETWORK_RETRY_MS = 5000;
+const PREFERRED_DEVICE_KEY = 'glass-remote.preferred-device';
+
+type PreferredDevice = { id: string; name: string };
+
+function readPreferredDevice(): PreferredDevice | null {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(PREFERRED_DEVICE_KEY) ?? 'null');
+    if (typeof parsed === 'object' && parsed !== null && 'id' in parsed && 'name' in parsed) {
+      return { id: String(parsed.id), name: String(parsed.name) };
+    }
+  } catch {
+    // ignore – no preference
+  }
+  return null;
+}
+
+function writePreferredDevice(device: PreferredDevice): void {
+  try {
+    localStorage.setItem(PREFERRED_DEVICE_KEY, JSON.stringify(device));
+  } catch {
+    // Not critical: the user is asked again next time.
+  }
+}
 
 type Override<T> = { value: T; setAt: number };
 
@@ -34,6 +57,8 @@ export type PlayerSnapshot = {
   fatal: ApiError | null;
   /** Persistent hint, e.g. missing Premium or exhausted quota. */
   notice: ApiError | null;
+  /** A play request waits for the user to pick a device. */
+  needsDeviceChoice: boolean;
 };
 
 export function progressAt(snapshot: Pick<PlayerSnapshot, 'anchor' | 'playback'>, now: number): number {
@@ -52,6 +77,7 @@ export function createPlayerEngine() {
     anchor: { ms: 0, at: performance.now() },
     fatal: null,
     notice: null,
+    needsDeviceChoice: false,
   };
   const listeners = new Set<() => void>();
 
@@ -220,31 +246,33 @@ export function createPlayerEngine() {
     }
   }
 
-  /** The device to start on when nothing is active: a smartphone if possible, else any controllable one. */
-  async function findDeviceId(): Promise<string | undefined> {
+  /**
+   * Where to start when nothing is active: the active device, else the one the user picked last
+   * time, else the only one available. null → the user has to choose (none or several available).
+   */
+  async function chooseDeviceId(): Promise<string | null> {
     const usable = (await api.getDevices()).filter((device) => device.id && !device.is_restricted);
-    const device = usable.find((d) => d.is_active) ?? usable.find((d) => d.type === 'Smartphone') ?? usable[0];
-    return device?.id ?? undefined;
+    const preferred = readPreferredDevice();
+    const device =
+      usable.find((d) => d.is_active) ??
+      usable.find((d) => preferred && (d.id === preferred.id || d.name === preferred.name)) ??
+      (usable.length === 1 ? usable[0] : undefined);
+    return device?.id ?? null;
   }
 
-  async function startOnSomeDevice(request: api.PlayRequest, fallback?: api.PlayRequest) {
-    const deviceId = snapshot.status === 'idle' ? await findDeviceId() : undefined;
+  async function startWithFallback(request: api.PlayRequest, fallback: api.PlayRequest | undefined, deviceId?: string) {
     try {
       await api.startPlayback(request, deviceId);
     } catch (error) {
-      if (!(error instanceof ApiError)) throw error;
-      if (error.kind === 'no-active-device' && !deviceId) {
-        const retryDeviceId = await findDeviceId();
-        if (!retryDeviceId) throw error;
-        await api.startPlayback(request, retryDeviceId);
-      } else if (fallback && error.kind === 'unknown' && (error.status === 400 || error.status === 404)) {
-        // e.g. a relinked track that isn't part of the album context → play it on its own.
-        await api.startPlayback(fallback, deviceId);
-      } else {
-        throw error;
-      }
+      // e.g. a relinked track that isn't part of the album context → play it on its own.
+      const rejected = error instanceof ApiError && error.kind === 'unknown' && (error.status === 400 || error.status === 404);
+      if (!fallback || !rejected) throw error;
+      await api.startPlayback(fallback, deviceId);
     }
   }
+
+  /** A play request waiting for the user to pick a device. */
+  let pendingPlay: { request: api.PlayRequest; fallback?: api.PlayRequest } | null = null;
 
   function setOverride<K extends keyof Overrides>(key: K, value: NonNullable<Overrides[K]>['value']) {
     overrides = { ...overrides, [key]: { value, setAt: performance.now() } };
@@ -326,20 +354,68 @@ export function createPlayerEngine() {
       if (sinceLast >= VOLUME_SEND_INTERVAL_MS) sendVolume();
       else volumeTimer = window.setTimeout(sendVolume, VOLUME_SEND_INTERVAL_MS - sinceLast);
     },
-    /** Starts something new (search result, playlist …); resolves true when Spotify accepted it. */
-    playItem(request: api.PlayRequest, fallback?: api.PlayRequest): Promise<boolean> {
+    /**
+     * Starts something new (search result, playlist …). Resolves true when Spotify accepted it;
+     * if no device is active and it's unclear which one to use, sets `needsDeviceChoice` instead.
+     */
+    async playItem(request: api.PlayRequest, fallback?: api.PlayRequest): Promise<boolean> {
       setOverride('isPlaying', true);
       setOverride('seek', 0);
       publish({ anchor: { ms: 0, at: performance.now() } });
-      return command(() => startOnSomeDevice(request, fallback), 400);
+
+      let needsChoice = false;
+      const started = await command(async () => {
+        let deviceId: string | undefined;
+        if (snapshot.status === 'idle') {
+          const chosen = await chooseDeviceId();
+          if (!chosen) {
+            needsChoice = true;
+            return;
+          }
+          deviceId = chosen;
+        }
+        try {
+          await startWithFallback(request, fallback, deviceId);
+        } catch (error) {
+          if (!(error instanceof ApiError && error.kind === 'no-active-device' && !deviceId)) throw error;
+          const chosen = await chooseDeviceId();
+          if (!chosen) {
+            needsChoice = true;
+            return;
+          }
+          await startWithFallback(request, fallback, chosen);
+        }
+      }, 400);
+
+      if (!needsChoice) return started;
+      pendingPlay = { request, fallback };
+      overrides = {};
+      publish({ needsDeviceChoice: true });
+      return false;
+    },
+    cancelDeviceChoice() {
+      if (!pendingPlay && !snapshot.needsDeviceChoice) return;
+      pendingPlay = null;
+      publish({ needsDeviceChoice: false });
     },
     async addToQueue(uri: string) {
       if (await command(() => api.addToQueue(uri), 1500)) showToast('Zur Warteschlange hinzugefügt', 'info');
     },
-    async transferTo(deviceId: string) {
+    /** The user picked a device: start the pending request there, or move playback over. */
+    async useDevice(device: Pick<Device, 'id' | 'name'>): Promise<boolean> {
+      if (!device.id) return false;
+      const deviceId = device.id;
+      writePreferredDevice({ id: deviceId, name: device.name });
+      const pending = pendingPlay;
+      if (pending) {
+        pendingPlay = null;
+        setOverride('isPlaying', true);
+        publish({ needsDeviceChoice: false, anchor: { ms: 0, at: performance.now() } });
+        return command(() => startWithFallback(pending.request, pending.fallback, deviceId), 400);
+      }
       // From the idle state there is nothing to resume, so start playing on the target.
       const startPlaying = snapshot.status === 'idle' || Boolean(snapshot.playback?.is_playing);
-      await command(() => api.transferPlayback(deviceId, startPlaying), 900);
+      return command(() => api.transferPlayback(deviceId, startPlaying), 900);
     },
   };
 }

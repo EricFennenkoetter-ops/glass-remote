@@ -13,13 +13,16 @@ import { GlassButton } from './components/GlassButton';
 import { Toasts } from './components/Toasts';
 import { describeItem } from './lib/item';
 import { usePlayer } from './player/usePlayer';
+import { MiniPlayer } from './components/MiniPlayer';
+import { TabBar, type TabId } from './components/TabBar';
 import { DevicesSheet } from './screens/DevicesSheet';
-import { Idle } from './screens/Idle';
 import { Login } from './screens/Login';
 import { MessageScreen } from './screens/MessageScreen';
-import { NowPlaying } from './screens/NowPlaying';
+import { PlayerOverlay } from './screens/PlayerOverlay';
 import { QueueSheet } from './screens/QueueSheet';
-import { SearchSheet } from './screens/SearchSheet';
+import { HomeTab } from './screens/tabs/HomeTab';
+import { LibraryTab } from './screens/tabs/LibraryTab';
+import { SearchTab } from './screens/tabs/SearchTab';
 
 // Module level so React StrictMode's double effect can't exchange the one-time code twice.
 let callbackExchange: Promise<void> | null = null;
@@ -85,57 +88,78 @@ export function App() {
 
 function Remote() {
   const { player, snapshot } = usePlayer();
-  const [sheet, setSheet] = useState<'queue' | 'devices' | 'search' | null>(null);
-  const closeSheet = useCallback(() => setSheet(null), []);
+  const [tab, setTab] = useState<TabId>('home');
+  const [sheet, setSheet] = useState<'queue' | 'devices' | null>(null);
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const closeSheet = useCallback(() => {
+    setSheet(null);
+    player.cancelDeviceChoice();
+  }, [player]);
   const openDevices = useCallback(() => setSheet('devices'), []);
   const openQueue = useCallback(() => setSheet('queue'), []);
-  const openSearch = useCallback(() => setSheet('search'), []);
+  const closePlayer = useCallback(() => setPlayerOpen(false), []);
 
   const item = snapshot.playback?.item ?? null;
   const info = useMemo(() => (item ? describeItem(item) : null), [item]);
 
-  let screen;
+  // Something should start but nothing is active and several devices are available → let the user pick.
+  useEffect(() => {
+    if (snapshot.needsDeviceChoice) setSheet('devices');
+  }, [snapshot.needsDeviceChoice]);
+
   if (snapshot.fatal) {
-    screen = (
-      <MessageScreen
-        title="Kein Zugriff"
-        actions={
-          <GlassButton variant="primary" size="pill" onClick={logout}>
-            Abmelden
-          </GlassButton>
-        }
-      >
-        <p>{snapshot.fatal.message}</p>
-      </MessageScreen>
-    );
-  } else if (snapshot.status === 'loading') {
-    screen = (
-      <main className="screen center-screen">
-        <span className="spinner spinner--large" aria-label="Lädt" />
-      </main>
-    );
-  } else if (snapshot.status === 'idle') {
-    screen = <Idle onOpenDevices={openDevices} onOpenSearch={openSearch} />;
-  } else {
-    screen = (
-      <NowPlaying
-        snapshot={snapshot}
-        info={info}
-        player={player}
-        onOpenQueue={openQueue}
-        onOpenDevices={openDevices}
-        onOpenSearch={openSearch}
-      />
+    return (
+      <>
+        <Background imageUrl={null} paletteSourceUrl={null} />
+        <MessageScreen
+          title="Kein Zugriff"
+          actions={
+            <GlassButton variant="primary" size="pill" onClick={logout}>
+              Abmelden
+            </GlassButton>
+          }
+        >
+          <p>{snapshot.fatal.message}</p>
+        </MessageScreen>
+      </>
     );
   }
 
   return (
     <>
       <Background imageUrl={info?.imageSmall ?? null} paletteSourceUrl={info?.imageMedium ?? null} />
-      {screen}
+      <div className="tabs-dim" aria-hidden="true" />
+      <main className={`tab-screen${snapshot.status === 'loading' ? '' : ' has-mini-player'}`} key={tab}>
+        {tab === 'home' && <HomeTab player={player} snapshot={snapshot} onOpenDevices={openDevices} />}
+        {tab === 'search' && <SearchTab player={player} snapshot={snapshot} />}
+        {tab === 'library' && <LibraryTab player={player} snapshot={snapshot} />}
+      </main>
+      <div className="bottom-chrome">
+        <MiniPlayer
+          snapshot={snapshot}
+          info={info}
+          player={player}
+          onOpen={() => setPlayerOpen(true)}
+          onOpenDevices={openDevices}
+        />
+        <TabBar active={tab} onChange={setTab} />
+      </div>
+      <PlayerOverlay
+        open={playerOpen && snapshot.status === 'active'}
+        onClose={closePlayer}
+        snapshot={snapshot}
+        info={info}
+        player={player}
+        onOpenQueue={openQueue}
+        onOpenDevices={openDevices}
+      />
       <QueueSheet open={sheet === 'queue'} onClose={closeSheet} currentKey={info?.key ?? null} />
-      <DevicesSheet open={sheet === 'devices'} onClose={closeSheet} onTransfer={player.transferTo} />
-      <SearchSheet open={sheet === 'search'} onClose={closeSheet} player={player} />
+      <DevicesSheet
+        open={sheet === 'devices'}
+        choosingForPlayback={snapshot.needsDeviceChoice}
+        onClose={closeSheet}
+        onSelect={player.useDevice}
+      />
     </>
   );
 }

@@ -4,9 +4,12 @@ import type {
   Paging,
   PlaybackState,
   QueueResponse,
+  RecentlyPlayedResponse,
   RepeatState,
   SearchResponse,
   SimplifiedPlaylist,
+  Artist,
+  Track,
 } from './types';
 
 // https://developer.spotify.com/documentation/web-api/reference/#category-player
@@ -65,3 +68,12 @@ export const search = (query: string) =>
 
 export const getMyPlaylists = async () =>
   (await spotify<Paging<SimplifiedPlaylist>>('/me/playlists', { query: { limit: 50 } }))?.items ?? [];
+
+export const getRecentlyPlayed = async () =>
+  (await spotify<RecentlyPlayedResponse>('/me/player/recently-played', { query: { limit: 50 } }))?.items ?? [];
+
+export const getTopArtists = async () =>
+  (await spotify<Paging<Artist>>('/me/top/artists', { query: { limit: 10, time_range: 'short_term' } }))?.items ?? [];
+
+export const getTopTracks = async () =>
+  (await spotify<Paging<Track>>('/me/top/tracks', { query: { limit: 10, time_range: 'short_term' } }))?.items ?? [];

@@ -3,6 +3,16 @@
 
 export type SpotifyImage = { url: string; width: number | null; height: number | null };
 
+/** The album fields this app reads; both track.album and search album results have them. */
+export type AlbumSummary = {
+  uri: string;
+  name: string;
+  images: SpotifyImage[];
+  artists?: { name: string }[];
+  album_type?: string;
+  release_date?: string;
+};
+
 export type Track = {
   type: 'track';
   id: string | null;
@@ -10,7 +20,7 @@ export type Track = {
   name: string;
   duration_ms: number;
   artists: { name: string }[];
-  album: { uri: string; name: string; images: SpotifyImage[] };
+  album: AlbumSummary;
 };
 
 export type Episode = {
@@ -63,6 +73,8 @@ export type PlaybackState = {
   is_playing: boolean;
   item: PlayableItem | null;
   currently_playing_type: 'track' | 'episode' | 'ad' | 'unknown';
+  /** Album, playlist, artist … the item is played from; null for single tracks. */
+  context: { uri: string; type: string } | null;
   actions?: { disallows?: Partial<Record<DisallowKey, boolean>> };
 };
 
@@ -121,4 +133,8 @@ export type SearchResponse = {
   artists?: Paging<Artist>;
   albums?: Paging<SimplifiedAlbum>;
   playlists?: Paging<SimplifiedPlaylist>;
+};
+
+export type RecentlyPlayedResponse = {
+  items: { track: Track; played_at: string; context: { uri: string; type: string } | null }[];
 };

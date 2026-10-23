@@ -62,7 +62,8 @@ export function installDemo(): void {
       accessToken: 'demo',
       refreshToken: 'demo',
       expiresAt: Date.now() + 365 * 24 * 3600_000,
-      scope: 'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative',
+      scope:
+        'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative user-read-recently-played user-top-read',
     }),
   );
 
@@ -80,6 +81,7 @@ export function installDemo(): void {
     shuffle: false,
     repeat: 'off' as RepeatState,
     deviceId: 'iphone',
+    contextUri: null as string | null,
   };
 
   const progress = () => {
@@ -119,6 +121,7 @@ export function installDemo(): void {
         is_playing: state.playing,
         item: tracks[state.index]!,
         currently_playing_type: 'track',
+        context: { uri: state.contextUri ?? tracks[state.index]!.album.uri, type: state.contextUri ? 'playlist' : 'album' },
         actions: { disallows: state.playing ? { resuming: true } : { pausing: true } },
       };
       return json(playback);
@@ -133,6 +136,7 @@ export function installDemo(): void {
     if (path === '/me/player/play') {
       const body = init?.body ? (JSON.parse(String(init.body)) as { uris?: string[]; context_uri?: string; offset?: { uri: string } }) : {};
       const targetUri = body.offset?.uri ?? body.uris?.[0] ?? body.context_uri;
+      state.contextUri = body.context_uri?.startsWith('spotify:playlist:') ? body.context_uri : null;
       if (targetUri) {
         const index = tracks.findIndex((t) => t.uri === targetUri || t.album.uri === targetUri);
         state.index = index >= 0 ? index : (state.index + 1) % tracks.length;
@@ -157,6 +161,21 @@ export function installDemo(): void {
         albums: paging(hits.map((t) => ({ type: 'album', uri: t.album.uri, name: t.album.name, album_type: 'album', release_date: '2025-03-14', artists: t.artists, images: t.album.images }))),
         playlists: paging(hits.length ? [null, { type: 'playlist', uri: 'spotify:playlist:demo', name: `Das ist ${hits[0]?.artists[0]?.name}`, images: hits[0]?.album.images, owner: { display_name: 'Spotify' }, items: { total: 50 } }] : []),
       });
+    }
+    if (method === 'GET' && path === '/me/player/recently-played') {
+      const items = [2, 0, 3, 1, 2, 0].map((index, i) => ({
+        track: tracks[index],
+        played_at: new Date(Date.now() - i * 600_000).toISOString(),
+        context: i % 2 ? { type: 'playlist', uri: `spotify:playlist:mine${index}` } : { type: 'album', uri: tracks[index]!.album.uri },
+      }));
+      return json({ items });
+    }
+    if (method === 'GET' && path === '/me/top/artists') {
+      const items = tracks.map((t, i) => ({ type: 'artist', uri: `spotify:artist:demo${i}`, name: t.artists[0]?.name, images: t.album.images }));
+      return json({ items, total: items.length, next: null });
+    }
+    if (method === 'GET' && path === '/me/top/tracks') {
+      return json({ items: [...tracks].reverse(), total: tracks.length, next: null });
     }
     if (method === 'GET' && path === '/me/playlists') {
       const items = tracks.map((t, i) => ({ type: 'playlist', uri: `spotify:playlist:mine${i}`, name: ['Chill am Abend', 'Sommer 2026', 'Autofahrt', 'Fokus'][i], images: t.album.images, owner: { display_name: 'Eric' }, items: { total: 20 + i * 7 } }));

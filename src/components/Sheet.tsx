@@ -1,41 +1,21 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { GlassButton } from './GlassButton';
 import { Icon } from './Icon';
+import { useDragToDismiss, usePresence } from './usePresence';
 
 type SheetProps = {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
-  /** Non-scrolling area under the title, e.g. a search field. */
-  toolbar?: ReactNode;
-  /** full: always as tall as possible (keeps the layout stable while results load). */
-  size?: 'auto' | 'full';
 };
 
-const DISMISS_DISTANCE_PX = 110;
-const DISMISS_VELOCITY = 0.6; // px per ms
-const EXIT_FALLBACK_MS = 700;
-
 /** Bottom sheet with spring in/out, drag-to-dismiss on the header, Escape and backdrop tap. */
-export function Sheet({ open, title, onClose, children, toolbar, size = 'auto' }: SheetProps) {
-  const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(false);
+export function Sheet({ open, title, onClose, children }: SheetProps) {
+  const { mounted, visible, unmount } = usePresence(open);
   const panelRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ startY: number; lastY: number; lastTime: number; velocity: number } | null>(null);
-
-  // Mount → next frame add .is-open (so the enter transition runs); close → wait for transition, unmount.
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-      const frame = requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
-      return () => cancelAnimationFrame(frame);
-    }
-    setVisible(false);
-    const timeout = window.setTimeout(() => setMounted(false), EXIT_FALLBACK_MS);
-    return () => window.clearTimeout(timeout);
-  }, [open]);
+  const dragHandlers = useDragToDismiss(panelRef, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -51,61 +31,18 @@ export function Sheet({ open, title, onClose, children, toolbar, size = 'auto' }
 
   if (!mounted) return null;
 
-  const setOffset = (px: number | null) => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    if (px === null) {
-      panel.style.removeProperty('--drag-offset');
-      panel.classList.remove('is-dragging');
-    } else {
-      panel.style.setProperty('--drag-offset', `${px}px`);
-      panel.classList.add('is-dragging');
-    }
-  };
-
-  const dragHandlers = {
-    onPointerDown(event: PointerEvent<HTMLElement>) {
-      if ((event.target as HTMLElement).closest('button')) return;
-      event.currentTarget.setPointerCapture(event.pointerId);
-      drag.current = { startY: event.clientY, lastY: event.clientY, lastTime: event.timeStamp, velocity: 0 };
-    },
-    onPointerMove(event: PointerEvent<HTMLElement>) {
-      const state = drag.current;
-      if (!state) return;
-      const dt = Math.max(1, event.timeStamp - state.lastTime);
-      state.velocity = (event.clientY - state.lastY) / dt;
-      state.lastY = event.clientY;
-      state.lastTime = event.timeStamp;
-      const dy = event.clientY - state.startY;
-      // Rubber band when pulled upwards.
-      setOffset(dy > 0 ? dy : -Math.sqrt(-dy) * 2);
-    },
-    onPointerUp(event: PointerEvent<HTMLElement>) {
-      const state = drag.current;
-      drag.current = null;
-      if (!state) return;
-      const dy = event.clientY - state.startY;
-      setOffset(null);
-      if (dy > DISMISS_DISTANCE_PX || state.velocity > DISMISS_VELOCITY) onClose();
-    },
-    onPointerCancel() {
-      drag.current = null;
-      setOffset(null);
-    },
-  };
-
   return createPortal(
     <div className={`sheet-root${visible ? ' is-open' : ''}`}>
       <div className="sheet-backdrop" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
-        className={`sheet glass glass--thick${size === 'full' ? ' sheet--full' : ''}`}
+        className="sheet glass glass--thick"
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
         onTransitionEnd={(event) => {
-          if (!open && event.target === event.currentTarget) setMounted(false);
+          if (!open && event.target === event.currentTarget) unmount();
         }}
       >
         <header className="sheet__header" {...dragHandlers}>
@@ -115,7 +52,6 @@ export function Sheet({ open, title, onClose, children, toolbar, size = 'auto' }
             <Icon name="close" size={18} />
           </GlassButton>
         </header>
-        {toolbar && <div className="sheet__toolbar">{toolbar}</div>}
         <div className="sheet__content">{children}</div>
       </div>
     </div>,
