@@ -4,7 +4,6 @@ import {
   getMe,
   getMyPlaylists,
   getPlaybackState,
-  getRecentlyPlayed,
   getTopTracks,
   replacePlaylistItems,
   updatePlaylist,
@@ -13,7 +12,7 @@ import { hasScopes } from '../auth/session';
 import { PERSONAL_SCOPES } from '../config';
 import { getAppearance, TOP_RANGES } from '../lib/appearance';
 import { idFromUri, isPresent } from '../lib/media';
-import { showToast } from '../lib/toast';
+import { startDj } from './dj';
 import type { PlayerEngine } from './engine';
 import { invalidatePersonalData } from './usePersonalData';
 
@@ -98,35 +97,13 @@ async function createTopPlaylist(): Promise<string> {
 
 /** Gives Spotify's own autoplay (setting in the Spotify app) the chance to take over first. */
 const AUTOPLAY_GRACE_MS = 3500;
-const AUTOPLAY_TRACK_COUNT = 50;
 
-/**
- * Spotify removed its recommendations API for apps like this one, so "similar music" isn't
- * available. We continue with a shuffled mix of the user's top and recently played songs instead.
- */
-async function continueWithFavourites(player: PlayerEngine, lastUri: string) {
+/** When a playlist/album ends, the DJ takes over (unless Spotify already continued by itself). */
+async function continueWithDj(player: PlayerEngine, lastUri: string) {
   await new Promise((resolve) => window.setTimeout(resolve, AUTOPLAY_GRACE_MS));
   const state = await getPlaybackState().catch(() => null);
   if (state?.is_playing) return;
-
-  const [top, recent] = await Promise.all([
-    getTopTracks('short_term', 50).catch(() => null),
-    getRecentlyPlayed().catch(() => null),
-  ]);
-  const topUris = (top ?? []).filter(isPresent).map((track) => track.uri);
-  const recentUris = (recent ?? []).map(({ track }) => track.uri);
-  const uris = [...new Set([...topUris, ...recentUris])].filter((uri) => uri !== lastUri);
-  if (uris.length === 0) return;
-  shuffle(uris);
-  showToast('Autoplay: weiter mit deinen Lieblingssongs', 'info');
-  await player.playItem({ uris: uris.slice(0, AUTOPLAY_TRACK_COUNT) });
-}
-
-function shuffle<T>(items: T[]) {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j]!, items[i]!];
-  }
+  await startDj(player, { exclude: [lastUri] });
 }
 
 // ---------- wiring ----------
@@ -140,7 +117,7 @@ export function useAutomation(player: PlayerEngine) {
 
   useEffect(() => {
     player.setPlaybackEndedHandler((lastUri) => {
-      if (getAppearance().autoplay) void continueWithFavourites(player, lastUri);
+      if (getAppearance().autoplay) void continueWithDj(player, lastUri);
     });
     return () => player.setPlaybackEndedHandler(null);
   }, [player]);

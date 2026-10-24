@@ -169,7 +169,7 @@ export function installDemo(): void {
       return empty();
     }
     if (method === 'GET' && path === '/search') {
-      const q = (url.searchParams.get('q') ?? '').toLowerCase();
+      const q = (url.searchParams.get('q') ?? '').replace(/artist:"([^"]*)"/, '$1').toLowerCase();
       const hits = tracks.filter((t) => `${t.name} ${t.artists[0]?.name} ${t.album.name}`.toLowerCase().includes(q));
       const paging = <T>(items: T[]) => ({ items, total: items.length, next: null });
       return json({

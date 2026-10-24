@@ -199,3 +199,7 @@ export const removeFromLibrary = (uris: string[]) =>
 
 export const libraryContains = async (uris: string[]) =>
   (await spotify<boolean[]>('/me/library/contains', { query: { uris: uris.join(',') } })) ?? uris.map(() => false);
+
+/** Track-only search (Development Mode: max 10 per request). */
+export const searchTracks = async (query: string, limit = 10) =>
+  (await spotify<SearchResponse>('/search', { query: { q: query, type: 'track', limit } }))?.tracks?.items ?? [];

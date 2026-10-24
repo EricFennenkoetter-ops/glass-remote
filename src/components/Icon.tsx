@@ -153,6 +153,19 @@ const PATHS = {
       d="M12 6.5C10.3 5 7.8 4.5 4 4.5v13c3.8 0 6.3.5 8 2 1.7-1.5 4.2-2 8-2v-13c-3.8 0-6.3.5-8 2Zm0 0v13"
     />
   ),
+  dj: (
+    <>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        d="M4.5 15v-3a7.5 7.5 0 0 1 15 0v3"
+      />
+      <rect x="3" y="13.5" width="4.4" height="7" rx="1.8" />
+      <rect x="16.6" y="13.5" width="4.4" height="7" rx="1.8" />
+    </>
+  ),
   chevronRight: (
     <path d="m9.5 6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
   ),

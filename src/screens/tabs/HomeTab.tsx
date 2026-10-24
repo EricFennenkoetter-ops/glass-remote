@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { GlassButton } from '../../components/GlassButton';
 import { Icon } from '../../components/Icon';
 import { MediaCarousel, ShortcutGrid } from '../../components/MediaCards';
 import type { MediaItem } from '../../lib/media';
 import type { PlayerEngine, PlayerSnapshot } from '../../player/engine';
+import { startDj } from '../../player/dj';
 import { usePersonalData } from '../../player/usePersonalData';
 import { useStartItem } from '../../player/useStartItem';
 import { ReconnectCard, SkeletonCarousel, TabSection } from './TabParts';
@@ -28,6 +30,13 @@ export function HomeTab({ player, snapshot, onOpenDevices, onOpenAppearance, onO
   const { startingKey, activate } = useStartItem(player, onOpenDetail);
   const playingContextUri = snapshot.playback?.context?.uri ?? null;
   const shared = { startingKey, playingContextUri, onStart: activate };
+  const [djBusy, setDjBusy] = useState(false);
+
+  const letDjPlay = async () => {
+    setDjBusy(true);
+    await startDj(player, { exclude: snapshot.playback?.item ? [snapshot.playback.item.uri] : [] });
+    setDjBusy(false);
+  };
 
   const carousel = (title: string, items: MediaItem[]) =>
     items.length > 0 && (
@@ -49,6 +58,23 @@ export function HomeTab({ player, snapshot, onOpenDevices, onOpenAppearance, onO
           </GlassButton>
         </div>
       </header>
+
+      <button
+        type="button"
+        className="dj-card glass glass--text"
+        onClick={() => void letDjPlay()}
+        disabled={djBusy}
+        aria-label="DJ starten"
+      >
+        <span className="dj-card__icon">
+          <Icon name="dj" size={26} />
+        </span>
+        <span className="dj-card__text">
+          <span className="dj-card__title">DJ</span>
+          <span className="dj-card__subtitle">Ein Tipp – dein Mix aus Favoriten und Neuem</span>
+        </span>
+        <span className="dj-card__play">{djBusy ? <span className="spinner" aria-hidden="true" /> : <Icon name="play" size={22} />}</span>
+      </button>
 
       {snapshot.notice && (
         <div className="notice glass glass--text" role="status">
